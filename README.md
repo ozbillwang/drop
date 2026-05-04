@@ -8,6 +8,19 @@ Drop is a bright, controller-friendly falling-block puzzle game prototype built 
 - Garbage Sprint: start with a messy board and clear it as quickly as possible.
 - Versus Bot: clear multiple lines to send garbage to a simple bot opponent.
 
+## Themes and languages
+
+Drop includes six background themes:
+
+- Vital Green / 活力绿
+- Ocean Blue / 海洋蓝
+- Sunrise Orange / 晨光橙
+- Sport Black / 运动黑
+- Pulse Red / 脉冲红
+- Glacier Cyan / 冰川青
+
+The in-game UI supports English and Chinese.
+
 ## Controls
 
 Keyboard:
@@ -18,6 +31,8 @@ Keyboard:
 - Rotate: Up/X and Z
 - Hold: C
 - Pause/back: P or Esc
+- Cycle theme: T
+- Toggle language: L
 
 Gamepad:
 
@@ -41,4 +56,3 @@ Scores are stored locally in Godot's `user://scores.json`.
 ## Publishing note
 
 Drop should stay visually and commercially distinct from official Tetris products: use the Drop name, original art, original audio, and avoid Tetris trademarks in marketing or store metadata.
-

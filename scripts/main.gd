@@ -11,11 +11,151 @@ const MOVE_REPEAT_INTERVAL := 0.06
 
 enum Screen { MENU, PLAYING, PAUSED, GAME_OVER }
 enum Mode { MARATHON, SPRINT, VERSUS }
+enum Language { EN, ZH }
 
 const MODE_NAMES := {
 	Mode.MARATHON: "Marathon",
 	Mode.SPRINT: "Garbage Sprint",
 	Mode.VERSUS: "Versus Bot"
+}
+
+const MODE_KEYS := {
+	Mode.MARATHON: "mode_marathon",
+	Mode.SPRINT: "mode_sprint",
+	Mode.VERSUS: "mode_versus"
+}
+
+const THEME_KEYS := ["green", "blue", "orange", "black", "red", "cyan"]
+const THEME_DATA := {
+	"green": {
+		"name_en": "Vital Green",
+		"name_zh": "活力绿",
+		"bg": Color("#07170f"),
+		"grid": Color("#153726"),
+		"grid_alt": Color("#102b20"),
+		"glow_a": Color("#38ff84", 0.20),
+		"glow_b": Color("#00d5ff", 0.12),
+		"text": Color("#e8fff0"),
+		"muted": Color("#9fd8b8")
+	},
+	"blue": {
+		"name_en": "Ocean Blue",
+		"name_zh": "海洋蓝",
+		"bg": Color("#071424"),
+		"grid": Color("#14314d"),
+		"grid_alt": Color("#102842"),
+		"glow_a": Color("#00d5ff", 0.22),
+		"glow_b": Color("#66f07a", 0.10),
+		"text": Color("#e8f7ff"),
+		"muted": Color("#9fc6df")
+	},
+	"orange": {
+		"name_en": "Sunrise Orange",
+		"name_zh": "晨光橙",
+		"bg": Color("#211007"),
+		"grid": Color("#4c2a14"),
+		"grid_alt": Color("#3a2111"),
+		"glow_a": Color("#ff9f1c", 0.24),
+		"glow_b": Color("#ffde59", 0.12),
+		"text": Color("#fff3e1"),
+		"muted": Color("#e7b98c")
+	},
+	"black": {
+		"name_en": "Sport Black",
+		"name_zh": "运动黑",
+		"bg": Color("#07090d"),
+		"grid": Color("#252a34"),
+		"grid_alt": Color("#1a1f2a"),
+		"glow_a": Color("#ffffff", 0.10),
+		"glow_b": Color("#00d5ff", 0.14),
+		"text": Color("#f5f7fb"),
+		"muted": Color("#a8b0c4")
+	},
+	"red": {
+		"name_en": "Pulse Red",
+		"name_zh": "脉冲红",
+		"bg": Color("#20070d"),
+		"grid": Color("#4a1622"),
+		"grid_alt": Color("#36101b"),
+		"glow_a": Color("#ff4f8b", 0.24),
+		"glow_b": Color("#ffde59", 0.10),
+		"text": Color("#ffeaf0"),
+		"muted": Color("#e5a2b5")
+	},
+	"cyan": {
+		"name_en": "Glacier Cyan",
+		"name_zh": "冰川青",
+		"bg": Color("#06191b"),
+		"grid": Color("#154044"),
+		"grid_alt": Color("#103237"),
+		"glow_a": Color("#7dfff2", 0.22),
+		"glow_b": Color("#a66cff", 0.12),
+		"text": Color("#e7fffd"),
+		"muted": Color("#9bd8d3")
+	}
+}
+
+const I18N := {
+	"en": {
+		"pick_mode": "Pick a mode",
+		"controls_hint": "Keyboard: arrows / Z X / space / C / P. Gamepad: D-pad / face buttons / Start. T theme, L language.",
+		"play_hint": "Clear lines, build combos, use Hold, and watch the next queue. T theme, L language.",
+		"paused_hint": "Paused. Press P / Esc / Start to resume.",
+		"game_over_hint": "Press Esc / Start to return to the mode menu.",
+		"tagline": "Fast, colorful block-clearing for couch and controller.",
+		"mode_summary": "Modes: speed survival, messy board cleanup, and bot battle.",
+		"mode_marathon": "Marathon",
+		"mode_sprint": "Garbage Sprint",
+		"mode_versus": "Versus Bot",
+		"score": "Score",
+		"lines": "Lines",
+		"level": "Level",
+		"hold": "Hold",
+		"bot_lines": "Bot lines",
+		"next": "Next",
+		"bot": "Bot",
+		"history": "Best Drops",
+		"no_scores": "No scores yet",
+		"theme": "Theme",
+		"language": "Language",
+		"english": "English",
+		"chinese": "中文",
+		"paused": "Paused",
+		"game_over": "Game Over",
+		"board_cleared": "Board Cleared!",
+		"you_win": "You Win!",
+		"bot_wins": "Bot Wins"
+	},
+	"zh": {
+		"pick_mode": "选择玩法",
+		"controls_hint": "键盘：方向键 / Z X / 空格 / C / P。手柄：十字键 / 功能键 / Start。T 换主题，L 切语言。",
+		"play_hint": "消行、连击、使用暂存，并留意下一个方块队列。T 换主题，L 切语言。",
+		"paused_hint": "已暂停。按 P / Esc / Start 继续。",
+		"game_over_hint": "按 Esc / Start 返回玩法菜单。",
+		"tagline": "快节奏、色彩鲜活，适合沙发和手柄的落块消除。",
+		"mode_summary": "玩法：加速生存、残局清理、Bot 对战。",
+		"mode_marathon": "单人挑战",
+		"mode_sprint": "残局速清",
+		"mode_versus": "Bot 对战",
+		"score": "分数",
+		"lines": "消行",
+		"level": "等级",
+		"hold": "暂存",
+		"bot_lines": "Bot 消行",
+		"next": "下一个",
+		"bot": "Bot",
+		"history": "历史高分",
+		"no_scores": "暂无分数",
+		"theme": "背景",
+		"language": "语言",
+		"english": "English",
+		"chinese": "中文",
+		"paused": "已暂停",
+		"game_over": "游戏结束",
+		"board_cleared": "清理完成！",
+		"you_win": "你赢了！",
+		"bot_wins": "Bot 获胜"
+	}
 }
 
 const PALETTE := {
@@ -42,6 +182,8 @@ const PIECES := {
 var screen := Screen.MENU
 var mode := Mode.MARATHON
 var selected_mode := 0
+var language := Language.EN
+var theme_index := 0
 var board: Array = []
 var bot_board: Array = []
 var active := ""
@@ -64,7 +206,7 @@ var move_repeat_started := false
 var bot_clock := 0.0
 var bot_lines := 0
 var bot_alive := true
-var winner_text := ""
+var result_key := ""
 var history: Array = []
 var rng := RandomNumberGenerator.new()
 
@@ -73,6 +215,8 @@ var stats_label: Label
 var hint_label: Label
 var history_box: VBoxContainer
 var menu_buttons: Array[Button] = []
+var theme_button: Button
+var language_button: Button
 
 
 func _ready() -> void:
@@ -98,6 +242,8 @@ func _setup_input() -> void:
 	_add_action_key("hold", KEY_C)
 	_add_action_key("pause", KEY_ESCAPE)
 	_add_action_key("pause", KEY_P)
+	_add_action_key("cycle_theme", KEY_T)
+	_add_action_key("toggle_language", KEY_L)
 	_add_action_key("ui_accept", KEY_ENTER)
 	_add_action_key("ui_accept", KEY_SPACE)
 	_add_action_joy_button("move_left", JOY_BUTTON_DPAD_LEFT)
@@ -128,7 +274,6 @@ func _add_action_joy_button(action: StringName, button_index: JoyButton) -> void
 
 func _build_ui() -> void:
 	title_label = Label.new()
-	title_label.text = "DROP"
 	title_label.add_theme_font_size_override("font_size", 52)
 	title_label.position = Vector2(56, 32)
 	add_child(title_label)
@@ -149,10 +294,8 @@ func _build_ui() -> void:
 	history_box.size = Vector2(270, 390)
 	add_child(history_box)
 
-	var labels := ["Marathon", "Garbage Sprint", "Versus Bot"]
-	for i in labels.size():
+	for i in 3:
 		var button := Button.new()
-		button.text = labels[i]
 		button.position = Vector2(56, 220 + i * 64)
 		button.size = Vector2(260, 48)
 		button.pressed.connect(func() -> void:
@@ -161,16 +304,92 @@ func _build_ui() -> void:
 		add_child(button)
 		menu_buttons.append(button)
 
+	theme_button = Button.new()
+	theme_button.position = Vector2(56, 430)
+	theme_button.size = Vector2(260, 42)
+	theme_button.pressed.connect(_cycle_theme)
+	add_child(theme_button)
+
+	language_button = Button.new()
+	language_button.position = Vector2(56, 482)
+	language_button.size = Vector2(260, 42)
+	language_button.pressed.connect(_toggle_language)
+	add_child(language_button)
+
+
+func _language_code() -> String:
+	return "zh" if language == Language.ZH else "en"
+
+
+func _text(key: String) -> String:
+	return I18N[_language_code()].get(key, key)
+
+
+func _mode_name(value: int) -> String:
+	return _text(MODE_KEYS[value])
+
+
+func _theme_data() -> Dictionary:
+	return THEME_DATA[THEME_KEYS[theme_index]]
+
+
+func _theme_name() -> String:
+	var data := _theme_data()
+	return data["name_zh"] if language == Language.ZH else data["name_en"]
+
+
+func _legacy_mode_name(raw: Variant) -> String:
+	if raw is int:
+		return _mode_name(raw)
+	match String(raw):
+		"Marathon":
+			return _mode_name(Mode.MARATHON)
+		"Garbage Sprint":
+			return _mode_name(Mode.SPRINT)
+		"Versus Bot":
+			return _mode_name(Mode.VERSUS)
+	return String(raw)
+
+
+func _refresh_static_text() -> void:
+	title_label.text = "DROP"
+	for i in menu_buttons.size():
+		menu_buttons[i].text = _mode_name(i)
+	theme_button.text = "%s: %s" % [_text("theme"), _theme_name()]
+	language_button.text = "%s: %s" % [_text("language"), _text("chinese") if language == Language.ZH else _text("english")]
+	if screen == Screen.MENU:
+		stats_label.text = _text("pick_mode")
+		hint_label.text = _text("controls_hint")
+	elif screen == Screen.PAUSED:
+		hint_label.text = _text("paused_hint")
+	elif screen == Screen.GAME_OVER:
+		hint_label.text = _text("game_over_hint")
+	else:
+		_update_labels()
+	_update_history_ui()
+
+
+func _cycle_theme() -> void:
+	theme_index = (theme_index + 1) % THEME_KEYS.size()
+	_refresh_static_text()
+	queue_redraw()
+
+
+func _toggle_language() -> void:
+	language = Language.ZH if language == Language.EN else Language.EN
+	_refresh_static_text()
+	queue_redraw()
+
 
 func _show_menu() -> void:
 	screen = Screen.MENU
-	title_label.text = "DROP"
-	stats_label.text = "Pick a mode"
-	hint_label.text = "Keyboard: arrows / Z X / space / C / P. Gamepad: D-pad / face buttons / Start."
 	history_box.visible = true
 	history_box.position = Vector2(910, 126)
 	for button in menu_buttons:
 		button.visible = true
+	theme_button.visible = true
+	language_button.visible = true
+	_refresh_static_text()
 	_update_history_ui()
 	queue_redraw()
 
@@ -201,12 +420,14 @@ func start_game(new_mode: int) -> void:
 	move_repeat_clock = 0.0
 	move_repeat_started = false
 	bot_clock = 0.0
-	winner_text = ""
+	result_key = ""
 	for i in 5:
 		next_queue.append(_draw_piece())
 	_spawn_piece()
 	for button in menu_buttons:
 		button.visible = false
+	theme_button.visible = false
+	language_button.visible = false
 	history_box.visible = false
 	_update_labels()
 	queue_redraw()
@@ -236,7 +457,7 @@ func _spawn_piece() -> void:
 	active_rot = 0
 	hold_locked = false
 	if not _can_place(active, active_pos, active_rot, board):
-		_finish_game("Game Over")
+		_finish_game("game_over")
 
 
 func _process(delta: float) -> void:
@@ -262,10 +483,16 @@ func _process(delta: float) -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
+	if event.is_action_pressed("cycle_theme"):
+		_cycle_theme()
+		return
+	if event.is_action_pressed("toggle_language"):
+		_toggle_language()
+		return
 	if event.is_action_pressed("pause"):
 		if screen == Screen.PLAYING:
 			screen = Screen.PAUSED
-			hint_label.text = "Paused. Press P / Esc / Start to resume."
+			hint_label.text = _text("paused_hint")
 		elif screen == Screen.PAUSED:
 			screen = Screen.PLAYING
 		elif screen == Screen.GAME_OVER:
@@ -373,7 +600,7 @@ func _hold() -> void:
 		active_pos = Vector2i(5, 1)
 		active_rot = 0
 		if not _can_place(active, active_pos, active_rot, board):
-			_finish_game("Game Over")
+			_finish_game("game_over")
 	hold_locked = true
 
 
@@ -384,7 +611,7 @@ func _lock_piece() -> void:
 	var cleared := _clear_lines(board)
 	_award(cleared)
 	if mode == Mode.SPRINT and _count_filled(board) == 0:
-		_finish_game("Board Cleared!")
+		_finish_game("board_cleared")
 		return
 	if mode == Mode.VERSUS and cleared > 1:
 		_add_garbage(bot_board, cleared - 1)
@@ -449,9 +676,9 @@ func _process_bot(delta: float) -> void:
 		_add_garbage(board, clears - 1)
 	if _board_too_high(bot_board):
 		bot_alive = false
-		_finish_game("You Win!")
+		_finish_game("you_win")
 	elif _board_too_high(board):
-		_finish_game("Bot Wins")
+		_finish_game("bot_wins")
 
 
 func _remove_random_bot_line() -> void:
@@ -515,19 +742,19 @@ func _ghost_pos() -> Vector2i:
 	return ghost
 
 
-func _finish_game(message: String) -> void:
-	winner_text = message
+func _finish_game(message_key: String) -> void:
+	result_key = message_key
 	screen = Screen.GAME_OVER
 	_save_score()
 	_update_history_ui()
 	history_box.visible = true
 	history_box.position = Vector2(910, 126)
-	hint_label.text = "Press Esc / Start to return to the mode menu."
+	hint_label.text = _text("game_over_hint")
 
 
 func _save_score() -> void:
 	var entry := {
-		"mode": MODE_NAMES[mode],
+		"mode": mode,
 		"score": score,
 		"lines": lines,
 		"level": level,
@@ -558,34 +785,38 @@ func _update_history_ui() -> void:
 	for child in history_box.get_children():
 		child.queue_free()
 	var header := Label.new()
-	header.text = "Best Drops"
+	header.text = _text("history")
 	header.add_theme_font_size_override("font_size", 24)
 	history_box.add_child(header)
 	if history.is_empty():
 		var empty := Label.new()
-		empty.text = "No scores yet"
+		empty.text = _text("no_scores")
 		history_box.add_child(empty)
 		return
 	for i in min(history.size(), 8):
 		var entry = history[i]
 		var label := Label.new()
-		label.text = "%d. %s  %d" % [i + 1, entry.get("mode", "Mode"), int(entry.get("score", 0))]
+		label.text = "%d. %s  %d" % [i + 1, _legacy_mode_name(entry.get("mode", Mode.MARATHON)), int(entry.get("score", 0))]
 		label.add_theme_font_size_override("font_size", 16)
 		history_box.add_child(label)
 
 
 func _update_labels() -> void:
 	title_label.text = "DROP"
-	stats_label.text = "%s\nScore %d\nLines %d\nLevel %d\nHold %s" % [
-		MODE_NAMES[mode],
+	stats_label.text = "%s\n%s %d\n%s %d\n%s %d\n%s %s" % [
+		_mode_name(mode),
+		_text("score"),
 		score,
+		_text("lines"),
 		lines,
+		_text("level"),
 		level,
+		_text("hold"),
 		hold_piece if not hold_piece.is_empty() else "-"
 	]
 	if mode == Mode.VERSUS:
-		stats_label.text += "\nBot lines %d" % bot_lines
-	hint_label.text = "Clear lines, build combos, use Hold, and watch the next queue."
+		stats_label.text += "\n%s %d" % [_text("bot_lines"), bot_lines]
+	hint_label.text = _text("play_hint")
 
 
 func _draw() -> void:
@@ -598,24 +829,26 @@ func _draw() -> void:
 	if mode == Mode.VERSUS:
 		_draw_board(bot_board, Vector2(950, 112), false, 16)
 	if screen == Screen.PAUSED:
-		_draw_overlay("PAUSED")
+		_draw_overlay(_text("paused"))
 	elif screen == Screen.GAME_OVER:
-		_draw_overlay(winner_text)
+		_draw_overlay(_text(result_key))
 
 
 func _draw_background() -> void:
-	draw_rect(Rect2(Vector2.ZERO, size), Color("#10131f"))
+	var theme := _theme_data()
+	draw_rect(Rect2(Vector2.ZERO, size), theme["bg"])
 	for y in range(0, int(size.y), 36):
-		draw_line(Vector2(0, y), Vector2(size.x, y), Color("#1b2135"), 1.0)
+		draw_line(Vector2(0, y), Vector2(size.x, y), theme["grid"], 1.0)
 	for x in range(0, int(size.x), 36):
-		draw_line(Vector2(x, 0), Vector2(x, size.y), Color("#171d30"), 1.0)
-	draw_circle(Vector2(1060, 80), 92, Color("#ff4f8b", 0.16))
-	draw_circle(Vector2(180, 560), 122, Color("#00d5ff", 0.12))
+		draw_line(Vector2(x, 0), Vector2(x, size.y), theme["grid_alt"], 1.0)
+	draw_circle(Vector2(1060, 80), 92, theme["glow_a"])
+	draw_circle(Vector2(180, 560), 122, theme["glow_b"])
 
 
 func _draw_menu() -> void:
-	draw_string(get_theme_default_font(), Vector2(56, 180), "Fast, colorful block-clearing for couch and controller.", HORIZONTAL_ALIGNMENT_LEFT, -1, 22, Color("#dce7ff"))
-	draw_string(get_theme_default_font(), Vector2(56, 470), "Modes: speed survival, messy board cleanup, and bot battle.", HORIZONTAL_ALIGNMENT_LEFT, -1, 18, Color("#93a3c6"))
+	var theme := _theme_data()
+	draw_string(get_theme_default_font(), Vector2(56, 180), _text("tagline"), HORIZONTAL_ALIGNMENT_LEFT, -1, 22, theme["text"])
+	draw_string(get_theme_default_font(), Vector2(56, 560), _text("mode_summary"), HORIZONTAL_ALIGNMENT_LEFT, -1, 18, theme["muted"])
 
 
 func _draw_board(target_board: Array, origin: Vector2, include_active: bool, block_size: int = BLOCK) -> void:
@@ -651,11 +884,11 @@ func _draw_block(rect: Rect2, color: Color, muted: bool = false) -> void:
 func _draw_side_panel() -> void:
 	var font := get_theme_default_font()
 	var next_x := 720 if mode == Mode.VERSUS else 760
-	draw_string(font, Vector2(next_x, 72), "Next", HORIZONTAL_ALIGNMENT_LEFT, -1, 24, Color("#ffffff"))
+	draw_string(font, Vector2(next_x, 72), _text("next"), HORIZONTAL_ALIGNMENT_LEFT, -1, 24, Color("#ffffff"))
 	for i in min(5, next_queue.size()):
 		_draw_mini_piece(next_queue[i], Vector2(next_x + 20, 112 + i * 76), 16)
 	if mode == Mode.VERSUS:
-		draw_string(font, Vector2(950, 72), "Bot", HORIZONTAL_ALIGNMENT_LEFT, -1, 24, Color("#ffffff"))
+		draw_string(font, Vector2(950, 72), _text("bot"), HORIZONTAL_ALIGNMENT_LEFT, -1, 24, Color("#ffffff"))
 
 
 func _draw_mini_piece(piece: String, origin: Vector2, mini: int) -> void:
@@ -667,6 +900,6 @@ func _draw_mini_piece(piece: String, origin: Vector2, mini: int) -> void:
 func _draw_overlay(text: String) -> void:
 	var rect := Rect2(Vector2(360, 250), Vector2(560, 160))
 	draw_rect(rect, Color("#090b13", 0.92))
-	draw_rect(rect, Color("#ffde59"), false, 3.0)
+	draw_rect(rect, PALETTE["O"], false, 3.0)
 	draw_string(get_theme_default_font(), rect.position + Vector2(44, 70), text, HORIZONTAL_ALIGNMENT_LEFT, -1, 36, Color("#ffffff"))
-	draw_string(get_theme_default_font(), rect.position + Vector2(44, 112), "Score %d" % score, HORIZONTAL_ALIGNMENT_LEFT, -1, 22, Color("#dce7ff"))
+	draw_string(get_theme_default_font(), rect.position + Vector2(44, 112), "%s %d" % [_text("score"), score], HORIZONTAL_ALIGNMENT_LEFT, -1, 22, Color("#dce7ff"))
