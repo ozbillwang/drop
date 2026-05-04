@@ -6,6 +6,8 @@ const BLOCK := 28
 const BOARD_ORIGIN := Vector2(410, 76)
 const HISTORY_PATH := "user://scores.json"
 const MAX_HISTORY := 10
+const MOVE_REPEAT_DELAY := 0.18
+const MOVE_REPEAT_INTERVAL := 0.06
 
 enum Screen { MENU, PLAYING, PAUSED, GAME_OVER }
 enum Mode { MARATHON, SPRINT, VERSUS }
@@ -56,7 +58,9 @@ var combo := -1
 var drop_delay := 0.8
 var drop_clock := 0.0
 var soft_clock := 0.0
-var move_clock := 0.0
+var move_repeat_dir := 0
+var move_repeat_clock := 0.0
+var move_repeat_started := false
 var bot_clock := 0.0
 var bot_lines := 0
 var bot_alive := true
@@ -193,7 +197,9 @@ func start_game(new_mode: int) -> void:
 	drop_delay = 0.8
 	drop_clock = 0.0
 	soft_clock = 0.0
-	move_clock = 0.0
+	move_repeat_dir = 0
+	move_repeat_clock = 0.0
+	move_repeat_started = false
 	bot_clock = 0.0
 	winner_text = ""
 	for i in 5:
@@ -237,7 +243,7 @@ func _process(delta: float) -> void:
 	if screen != Screen.PLAYING:
 		return
 	drop_clock += delta
-	move_clock += delta
+	_process_horizontal_repeat(delta)
 	if Input.is_action_pressed("soft_drop"):
 		soft_clock += delta
 		if soft_clock >= 0.045:
@@ -246,12 +252,6 @@ func _process(delta: float) -> void:
 				score += 1
 	else:
 		soft_clock = 0.0
-	if Input.is_action_pressed("move_left") and move_clock >= 0.12:
-		move_clock = 0.0
-		_try_move(Vector2i(-1, 0))
-	if Input.is_action_pressed("move_right") and move_clock >= 0.12:
-		move_clock = 0.0
-		_try_move(Vector2i(1, 0))
 	if drop_clock >= drop_delay:
 		drop_clock = 0.0
 		_gravity_step()
@@ -286,8 +286,10 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 	if event.is_action_pressed("move_left"):
 		_try_move(Vector2i(-1, 0))
+		_start_horizontal_repeat(-1)
 	elif event.is_action_pressed("move_right"):
 		_try_move(Vector2i(1, 0))
+		_start_horizontal_repeat(1)
 	elif event.is_action_pressed("rotate_cw"):
 		_try_rotate(1)
 	elif event.is_action_pressed("rotate_ccw"):
@@ -297,6 +299,34 @@ func _unhandled_input(event: InputEvent) -> void:
 	elif event.is_action_pressed("hold"):
 		_hold()
 	queue_redraw()
+
+
+func _start_horizontal_repeat(direction: int) -> void:
+	move_repeat_dir = direction
+	move_repeat_clock = 0.0
+	move_repeat_started = false
+
+
+func _process_horizontal_repeat(delta: float) -> void:
+	var direction := 0
+	if Input.is_action_pressed("move_left") and not Input.is_action_pressed("move_right"):
+		direction = -1
+	elif Input.is_action_pressed("move_right") and not Input.is_action_pressed("move_left"):
+		direction = 1
+	if direction == 0:
+		move_repeat_dir = 0
+		move_repeat_clock = 0.0
+		move_repeat_started = false
+		return
+	if direction != move_repeat_dir:
+		_start_horizontal_repeat(direction)
+		return
+	move_repeat_clock += delta
+	var threshold := MOVE_REPEAT_INTERVAL if move_repeat_started else MOVE_REPEAT_DELAY
+	if move_repeat_clock >= threshold:
+		move_repeat_clock = 0.0
+		move_repeat_started = true
+		_try_move(Vector2i(direction, 0))
 
 
 func _gravity_step() -> void:
