@@ -31,6 +31,7 @@ Keyboard:
 - Rotate: Up/X and Z
 - Hold: C
 - Pause/back: P or Esc
+- Give up and return to menu: Q
 - Cycle theme: T
 - Toggle language: L
 
@@ -40,6 +41,7 @@ Gamepad:
 - Soft drop: D-pad down
 - Hard drop / rotate / hold: face buttons
 - Pause/back: Start
+- Give up and return to menu: Select/Back
 
 ## Run locally
 

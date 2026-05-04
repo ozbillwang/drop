@@ -98,9 +98,9 @@ const THEME_DATA := {
 const I18N := {
 	"en": {
 		"pick_mode": "Pick a mode",
-		"controls_hint": "Keyboard: arrows / Z X / space / C / P. Gamepad: D-pad / face buttons / Start. T theme, L language.",
-		"play_hint": "Clear lines, build combos, use Hold, and watch the next queue. T theme, L language.",
-		"paused_hint": "Paused. Press P / Esc / Start to resume.",
+		"controls_hint": "Keyboard: arrows / Z X / space / C / P / Q. Gamepad: D-pad / face buttons / Start / Select. T theme, L language.",
+		"play_hint": "Clear lines, build combos, use Hold, and watch the next queue. Start/Esc pause, Q/Select quit.",
+		"paused_hint": "Paused. Press P to resume, Esc / Start / Select / Q for menu.",
 		"game_over_hint": "Press Esc / Start to return to the mode menu.",
 		"tagline": "Fast, colorful block-clearing for couch and controller.",
 		"mode_summary": "Modes: speed survival, messy board cleanup, and bot battle.",
@@ -128,9 +128,9 @@ const I18N := {
 	},
 	"zh": {
 		"pick_mode": "选择玩法",
-		"controls_hint": "键盘：方向键 / Z X / 空格 / C / P。手柄：十字键 / 功能键 / Start。T 换主题，L 切语言。",
-		"play_hint": "消行、连击、使用暂存，并留意下一个方块队列。T 换主题，L 切语言。",
-		"paused_hint": "已暂停。按 P / Esc / Start 继续。",
+		"controls_hint": "键盘：方向键 / Z X / 空格 / C / P / Q。手柄：十字键 / 功能键 / Start / Select。T 换主题，L 切语言。",
+		"play_hint": "消行、连击、使用暂存，并留意下一个方块队列。Start/Esc 暂停，Q/Select 放弃。",
+		"paused_hint": "已暂停。按 P 继续，按 Esc / Start / Select / Q 返回菜单。",
 		"game_over_hint": "按 Esc / Start 返回玩法菜单。",
 		"tagline": "快节奏、色彩鲜活，适合沙发和手柄的落块消除。",
 		"mode_summary": "玩法：加速生存、残局清理、Bot 对战。",
@@ -242,6 +242,7 @@ func _setup_input() -> void:
 	_add_action_key("hold", KEY_C)
 	_add_action_key("pause", KEY_ESCAPE)
 	_add_action_key("pause", KEY_P)
+	_add_action_key("quit_to_menu", KEY_Q)
 	_add_action_key("cycle_theme", KEY_T)
 	_add_action_key("toggle_language", KEY_L)
 	_add_action_key("ui_accept", KEY_ENTER)
@@ -254,6 +255,7 @@ func _setup_input() -> void:
 	_add_action_joy_button("rotate_ccw", JOY_BUTTON_B)
 	_add_action_joy_button("hold", JOY_BUTTON_Y)
 	_add_action_joy_button("pause", JOY_BUTTON_START)
+	_add_action_joy_button("quit_to_menu", JOY_BUTTON_BACK)
 
 
 func _add_action_key(action: StringName, keycode: Key) -> void:
@@ -341,14 +343,14 @@ func _theme_name() -> String:
 func _legacy_mode_name(raw: Variant) -> String:
 	if raw is int:
 		return _mode_name(raw)
-	match String(raw):
+	match str(raw):
 		"Marathon":
 			return _mode_name(Mode.MARATHON)
 		"Garbage Sprint":
 			return _mode_name(Mode.SPRINT)
 		"Versus Bot":
 			return _mode_name(Mode.VERSUS)
-	return String(raw)
+	return str(raw)
 
 
 func _refresh_static_text() -> void:
@@ -489,12 +491,19 @@ func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("toggle_language"):
 		_toggle_language()
 		return
+	if event.is_action_pressed("quit_to_menu"):
+		if screen == Screen.PLAYING or screen == Screen.PAUSED or screen == Screen.GAME_OVER:
+			_show_menu()
+		return
 	if event.is_action_pressed("pause"):
 		if screen == Screen.PLAYING:
 			screen = Screen.PAUSED
 			hint_label.text = _text("paused_hint")
 		elif screen == Screen.PAUSED:
-			screen = Screen.PLAYING
+			if _is_resume_event(event):
+				screen = Screen.PLAYING
+			else:
+				_show_menu()
 		elif screen == Screen.GAME_OVER:
 			_show_menu()
 		queue_redraw()
@@ -526,6 +535,12 @@ func _unhandled_input(event: InputEvent) -> void:
 	elif event.is_action_pressed("hold"):
 		_hold()
 	queue_redraw()
+
+
+func _is_resume_event(event: InputEvent) -> bool:
+	if event is InputEventKey:
+		return event.physical_keycode == KEY_P
+	return false
 
 
 func _start_horizontal_repeat(direction: int) -> void:
