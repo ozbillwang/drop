@@ -21,6 +21,16 @@ Drop includes six background themes:
 
 The in-game UI supports English and Chinese.
 
+## Mobile play
+
+Godot can export Drop to iOS and Android. The game is designed for landscape play on phones and shows on-screen touch controls automatically on touch devices.
+
+Touch controls:
+
+- Left/right/soft drop: left-side buttons
+- Hard drop, rotate, hold: right-side buttons
+- Pause/menu: top-right button
+
 ## Controls
 
 Keyboard:

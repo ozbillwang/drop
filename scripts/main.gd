@@ -158,6 +158,17 @@ const I18N := {
 	}
 }
 
+const TOUCH_BUTTONS := [
+	{"id": "left", "label": "<", "side": "left", "x": 0, "y": 1, "w": 1, "h": 1},
+	{"id": "right", "label": ">", "side": "left", "x": 2, "y": 1, "w": 1, "h": 1},
+	{"id": "soft", "label": "v", "side": "left", "x": 1, "y": 1, "w": 1, "h": 1},
+	{"id": "hold", "label": "HOLD", "side": "right", "x": 0, "y": 1, "w": 1, "h": 1},
+	{"id": "rotate_ccw", "label": "Z", "side": "right", "x": 1, "y": 1, "w": 1, "h": 1},
+	{"id": "rotate_cw", "label": "X", "side": "right", "x": 2, "y": 1, "w": 1, "h": 1},
+	{"id": "hard", "label": "DROP", "side": "right", "x": 1, "y": 0, "w": 2, "h": 1},
+	{"id": "pause", "label": "MENU", "side": "top", "x": 0, "y": 0, "w": 1, "h": 1}
+]
+
 const PALETTE := {
 	"I": Color("#00d5ff"),
 	"J": Color("#3177ff"),
@@ -203,6 +214,10 @@ var soft_clock := 0.0
 var move_repeat_dir := 0
 var move_repeat_clock := 0.0
 var move_repeat_started := false
+var touch_left_pressed := false
+var touch_right_pressed := false
+var touch_soft_pressed := false
+var touch_controls_visible := false
 var bot_clock := 0.0
 var bot_lines := 0
 var bot_alive := true
@@ -217,6 +232,8 @@ var history_box: VBoxContainer
 var menu_buttons: Array[Button] = []
 var theme_button: Button
 var language_button: Button
+var touch_root: Control
+var touch_buttons := {}
 
 
 func _ready() -> void:
@@ -318,6 +335,30 @@ func _build_ui() -> void:
 	language_button.pressed.connect(_toggle_language)
 	add_child(language_button)
 
+	touch_root = Control.new()
+	touch_root.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	touch_root.visible = false
+	add_child(touch_root)
+	for spec in TOUCH_BUTTONS:
+		var button := Button.new()
+		button.text = spec["label"]
+		button.focus_mode = Control.FOCUS_NONE
+		button.add_theme_font_size_override("font_size", 18)
+		button.button_down.connect(func() -> void:
+			_touch_button_down(spec["id"])
+		)
+		button.button_up.connect(func() -> void:
+			_touch_button_up(spec["id"])
+		)
+		touch_root.add_child(button)
+		touch_buttons[spec["id"]] = button
+	_layout_touch_controls()
+
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_RESIZED and touch_root:
+		_layout_touch_controls()
+
 
 func _language_code() -> String:
 	return "zh" if language == Language.ZH else "en"
@@ -383,10 +424,100 @@ func _toggle_language() -> void:
 	queue_redraw()
 
 
+func _should_show_touch_controls() -> bool:
+	return OS.get_name() in ["Android", "iOS"] or DisplayServer.is_touchscreen_available()
+
+
+func _set_touch_controls(visible: bool) -> void:
+	touch_controls_visible = visible
+	if touch_root:
+		touch_root.visible = visible
+	if not visible:
+		touch_left_pressed = false
+		touch_right_pressed = false
+		touch_soft_pressed = false
+		move_repeat_dir = 0
+		move_repeat_clock = 0.0
+		move_repeat_started = false
+
+
+func _layout_touch_controls() -> void:
+	if not touch_root:
+		return
+	var button_size: float = clamp(size.y * 0.105, 56.0, 86.0)
+	var gap: float = button_size * 0.16
+	var margin: float = max(18.0, size.x * 0.025)
+	var bottom: float = size.y - button_size * 2.0 - gap - max(18.0, size.y * 0.035)
+	var left_origin := Vector2(margin, bottom)
+	var right_origin := Vector2(size.x - margin - button_size * 3.0 - gap * 2.0, bottom)
+	var top_origin := Vector2(size.x - margin - button_size, margin)
+	for spec in TOUCH_BUTTONS:
+		var button: Button = touch_buttons[spec["id"]]
+		var origin := left_origin
+		if spec["side"] == "right":
+			origin = right_origin
+		elif spec["side"] == "top":
+			origin = top_origin
+		button.position = origin + Vector2(float(spec["x"]) * (button_size + gap), float(spec["y"]) * (button_size + gap))
+		button.size = Vector2(float(spec["w"]) * button_size + float(spec["w"] - 1) * gap, float(spec["h"]) * button_size + float(spec["h"] - 1) * gap)
+
+
+func _touch_button_down(id: String) -> void:
+	if not touch_controls_visible:
+		return
+	match id:
+		"left":
+			if screen == Screen.PLAYING:
+				touch_left_pressed = true
+				_try_move(Vector2i(-1, 0))
+				_start_horizontal_repeat(-1)
+		"right":
+			if screen == Screen.PLAYING:
+				touch_right_pressed = true
+				_try_move(Vector2i(1, 0))
+				_start_horizontal_repeat(1)
+		"soft":
+			touch_soft_pressed = true
+		"hard":
+			if screen == Screen.PLAYING:
+				_hard_drop()
+		"rotate_cw":
+			if screen == Screen.PLAYING:
+				_try_rotate(1)
+		"rotate_ccw":
+			if screen == Screen.PLAYING:
+				_try_rotate(-1)
+		"hold":
+			if screen == Screen.PLAYING:
+				_hold()
+		"pause":
+			_handle_touch_menu()
+	queue_redraw()
+
+
+func _touch_button_up(id: String) -> void:
+	match id:
+		"left":
+			touch_left_pressed = false
+		"right":
+			touch_right_pressed = false
+		"soft":
+			touch_soft_pressed = false
+
+
+func _handle_touch_menu() -> void:
+	if screen == Screen.PLAYING:
+		screen = Screen.PAUSED
+		hint_label.text = _text("paused_hint")
+	elif screen == Screen.PAUSED or screen == Screen.GAME_OVER:
+		_show_menu()
+
+
 func _show_menu() -> void:
 	screen = Screen.MENU
 	history_box.visible = true
 	history_box.position = Vector2(910, 126)
+	_set_touch_controls(false)
 	for button in menu_buttons:
 		button.visible = true
 	theme_button.visible = true
@@ -421,6 +552,9 @@ func start_game(new_mode: int) -> void:
 	move_repeat_dir = 0
 	move_repeat_clock = 0.0
 	move_repeat_started = false
+	touch_left_pressed = false
+	touch_right_pressed = false
+	touch_soft_pressed = false
 	bot_clock = 0.0
 	result_key = ""
 	for i in 5:
@@ -431,6 +565,7 @@ func start_game(new_mode: int) -> void:
 	theme_button.visible = false
 	language_button.visible = false
 	history_box.visible = false
+	_set_touch_controls(_should_show_touch_controls())
 	_update_labels()
 	queue_redraw()
 
@@ -467,7 +602,7 @@ func _process(delta: float) -> void:
 		return
 	drop_clock += delta
 	_process_horizontal_repeat(delta)
-	if Input.is_action_pressed("soft_drop"):
+	if Input.is_action_pressed("soft_drop") or touch_soft_pressed:
 		soft_clock += delta
 		if soft_clock >= 0.045:
 			soft_clock = 0.0
@@ -551,9 +686,11 @@ func _start_horizontal_repeat(direction: int) -> void:
 
 func _process_horizontal_repeat(delta: float) -> void:
 	var direction := 0
-	if Input.is_action_pressed("move_left") and not Input.is_action_pressed("move_right"):
+	var left_pressed := Input.is_action_pressed("move_left") or touch_left_pressed
+	var right_pressed := Input.is_action_pressed("move_right") or touch_right_pressed
+	if left_pressed and not right_pressed:
 		direction = -1
-	elif Input.is_action_pressed("move_right") and not Input.is_action_pressed("move_left"):
+	elif right_pressed and not left_pressed:
 		direction = 1
 	if direction == 0:
 		move_repeat_dir = 0
