@@ -625,7 +625,7 @@ func _spawn_piece() -> void:
 	active_rot = 0
 	hold_locked = false
 	if not _can_place(active, active_pos, active_rot, board):
-		_finish_game("game_over")
+		_finish_game("bot_wins" if mode == Mode.VERSUS else "game_over")
 
 
 func _process(delta: float) -> void:
@@ -877,8 +877,6 @@ func _process_bot(delta: float) -> void:
 	if _board_too_high(bot_board):
 		bot_alive = false
 		_finish_game("you_win")
-	elif _board_too_high(board):
-		_finish_game("bot_wins")
 
 
 func _spawn_bot_piece() -> void:
