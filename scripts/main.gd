@@ -220,6 +220,9 @@ var hold_piece := ""
 var hold_locked := false
 var next_queue: Array[String] = []
 var bag: Array[String] = []
+var versus_sequence: Array[String] = []
+var player_piece_index := 0
+var bot_piece_index := 0
 var score := 0
 var lines := 0
 var level := 1
@@ -567,6 +570,9 @@ func start_game(new_mode: int) -> void:
 		bot_lines = 0
 		bot_alive = true
 	bag.clear()
+	versus_sequence.clear()
+	player_piece_index = 0
+	bot_piece_index = 0
 	next_queue.clear()
 	bot_piece = ""
 	hold_piece = ""
@@ -586,8 +592,14 @@ func start_game(new_mode: int) -> void:
 	touch_soft_pressed = false
 	bot_clock = 0.0
 	result_key = ""
-	for i in 5:
-		next_queue.append(_draw_piece())
+	if mode == Mode.VERSUS:
+		for i in 16:
+			versus_sequence.append(_draw_piece())
+		for i in 5:
+			next_queue.append(_peek_versus_piece(player_piece_index + i))
+	else:
+		for i in 5:
+			next_queue.append(_draw_piece())
 	_spawn_piece()
 	if mode == Mode.VERSUS:
 		_spawn_bot_piece()
@@ -618,9 +630,22 @@ func _draw_piece() -> String:
 	return bag.pop_back()
 
 
+func _peek_versus_piece(index: int) -> String:
+	while index >= versus_sequence.size():
+		versus_sequence.append(_draw_piece())
+	return versus_sequence[index]
+
+
 func _spawn_piece() -> void:
-	active = next_queue.pop_front()
-	next_queue.append(_draw_piece())
+	if mode == Mode.VERSUS:
+		active = _peek_versus_piece(player_piece_index)
+		player_piece_index += 1
+		next_queue.clear()
+		for i in 5:
+			next_queue.append(_peek_versus_piece(player_piece_index + i))
+	else:
+		active = next_queue.pop_front()
+		next_queue.append(_draw_piece())
 	active_pos = Vector2i(5, 1)
 	active_rot = 0
 	hold_locked = false
@@ -880,7 +905,8 @@ func _process_bot(delta: float) -> void:
 
 
 func _spawn_bot_piece() -> void:
-	bot_piece = _draw_piece()
+	bot_piece = _peek_versus_piece(bot_piece_index)
+	bot_piece_index += 1
 	bot_pos = Vector2i(5, 1)
 	bot_rot = 0
 	_choose_bot_target()
