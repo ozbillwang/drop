@@ -169,6 +169,14 @@ const TOUCH_BUTTONS := [
 	{"id": "pause", "label": "MENU", "side": "top", "x": 0, "y": 0, "w": 1, "h": 1}
 ]
 
+const BACKDROP_BLOCKS := [
+	{"piece": "T", "pos": Vector2(0.12, 0.16), "size": 34.0, "rot": 0, "alpha": 0.08},
+	{"piece": "S", "pos": Vector2(0.78, 0.15), "size": 30.0, "rot": 1, "alpha": 0.07},
+	{"piece": "L", "pos": Vector2(0.15, 0.77), "size": 42.0, "rot": 2, "alpha": 0.08},
+	{"piece": "I", "pos": Vector2(0.86, 0.70), "size": 28.0, "rot": 1, "alpha": 0.06},
+	{"piece": "O", "pos": Vector2(0.56, 0.88), "size": 25.0, "rot": 0, "alpha": 0.05}
+]
+
 const PALETTE := {
 	"I": Color("#00d5ff"),
 	"J": Color("#3177ff"),
@@ -997,14 +1005,85 @@ func _draw() -> void:
 
 
 func _draw_background() -> void:
-	var theme := _theme_data()
-	draw_rect(Rect2(Vector2.ZERO, size), theme["bg"])
+	var theme: Dictionary = _theme_data()
+	var bg: Color = theme["bg"]
+	var primary: Color = theme["glow_a"]
+	var secondary: Color = theme["glow_b"]
+	draw_rect(Rect2(Vector2.ZERO, size), bg)
+	_draw_glow_circle(Vector2(size.x * 0.82, size.y * 0.12), size.y * 0.32, primary)
+	_draw_glow_circle(Vector2(size.x * 0.18, size.y * 0.78), size.y * 0.36, secondary)
+	_draw_neon_beam(Vector2(-size.x * 0.08, size.y * 0.28), Vector2(size.x * 0.78, -size.y * 0.10), Color(primary, 0.10), 34.0)
+	_draw_neon_beam(Vector2(size.x * 0.32, size.y * 1.05), Vector2(size.x * 1.10, size.y * 0.34), Color(secondary, 0.09), 46.0)
+	_draw_background_grid(theme)
+	_draw_background_blocks(primary, secondary)
+	_draw_particle_sparks(primary, secondary)
+	_draw_vignette()
+
+
+func _draw_background_grid(theme: Dictionary) -> void:
 	for y in range(0, int(size.y), 36):
-		draw_line(Vector2(0, y), Vector2(size.x, y), theme["grid"], 1.0)
+		var alpha := 0.32 if y % 144 == 0 else 0.18
+		draw_line(Vector2(0, y), Vector2(size.x, y), Color(theme["grid"], alpha), 1.0)
 	for x in range(0, int(size.x), 36):
-		draw_line(Vector2(x, 0), Vector2(x, size.y), theme["grid_alt"], 1.0)
-	draw_circle(Vector2(1060, 80), 92, theme["glow_a"])
-	draw_circle(Vector2(180, 560), 122, theme["glow_b"])
+		var alpha := 0.30 if x % 144 == 0 else 0.15
+		draw_line(Vector2(x, 0), Vector2(x, size.y), Color(theme["grid_alt"], alpha), 1.0)
+	for y in range(18, int(size.y), 72):
+		draw_line(Vector2(0, y), Vector2(size.x, y - size.x * 0.08), Color(theme["grid"], 0.08), 1.0)
+
+
+func _draw_glow_circle(center: Vector2, radius: float, color: Color) -> void:
+	for i in range(7, 0, -1):
+		var step := float(i) / 7.0
+		draw_circle(center, radius * step, Color(color, color.a * 0.18 * (1.0 - step * 0.55)))
+
+
+func _draw_neon_beam(start: Vector2, end: Vector2, color: Color, width: float) -> void:
+	var direction := (end - start).normalized()
+	var normal := Vector2(-direction.y, direction.x) * width
+	draw_polygon([
+		start - normal,
+		start + normal,
+		end + normal,
+		end - normal
+	], [color])
+	draw_line(start, end, Color(color, min(color.a + 0.10, 0.22)), 2.0)
+
+
+func _draw_background_blocks(primary: Color, secondary: Color) -> void:
+	for i in BACKDROP_BLOCKS.size():
+		var spec: Dictionary = BACKDROP_BLOCKS[i]
+		var color := primary if i % 2 == 0 else secondary
+		_draw_tetromino_silhouette(
+			spec["piece"],
+			Vector2(size.x * spec["pos"].x, size.y * spec["pos"].y),
+			spec["size"],
+			spec["rot"],
+			Color(color, spec["alpha"])
+		)
+
+
+func _draw_tetromino_silhouette(piece: String, origin: Vector2, block_size: float, rotation: int, color: Color) -> void:
+	for cell in _piece_cells(piece, Vector2i.ZERO, rotation):
+		var rect := Rect2(origin + Vector2(cell.x, cell.y) * block_size, Vector2(block_size, block_size))
+		draw_rect(rect.grow(-2.0), color)
+		draw_rect(rect.grow(-2.0), Color(color, min(color.a * 1.8, 0.22)), false, 1.0)
+
+
+func _draw_particle_sparks(primary: Color, secondary: Color) -> void:
+	for i in 42:
+		var x := fmod(float(i * 197 + theme_index * 53), 1000.0) / 1000.0 * size.x
+		var y := fmod(float(i * 113 + theme_index * 97), 1000.0) / 1000.0 * size.y
+		var color := primary if i % 2 == 0 else secondary
+		var radius := 1.2 + float(i % 4) * 0.45
+		draw_circle(Vector2(x, y), radius, Color(color, 0.16))
+
+
+func _draw_vignette() -> void:
+	var edge := Color("#000000", 0.22)
+	draw_rect(Rect2(Vector2.ZERO, Vector2(size.x, 22)), edge)
+	draw_rect(Rect2(Vector2(0, size.y - 32), Vector2(size.x, 32)), edge)
+	draw_rect(Rect2(Vector2.ZERO, Vector2(22, size.y)), edge)
+	draw_rect(Rect2(Vector2(size.x - 22, 0), Vector2(22, size.y)), edge)
 
 
 func _draw_menu() -> void:
