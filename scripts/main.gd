@@ -26,6 +26,14 @@ const MODE_KEYS := {
 }
 
 const THEME_KEYS := ["green", "blue", "orange", "black", "red", "cyan"]
+const BACKGROUND_PATHS := {
+	"green": "res://assets/backgrounds/vital-green.png",
+	"blue": "res://assets/backgrounds/ocean-blue.png",
+	"orange": "res://assets/backgrounds/sunrise-orange.png",
+	"black": "res://assets/backgrounds/sport-black.png",
+	"red": "res://assets/backgrounds/pulse-red.png",
+	"cyan": "res://assets/backgrounds/glacier-cyan.png"
+}
 const THEME_DATA := {
 	"green": {
 		"name_en": "Vital Green",
@@ -232,6 +240,7 @@ var bot_alive := true
 var result_key := ""
 var history: Array = []
 var rng := RandomNumberGenerator.new()
+var background_textures := {}
 
 var title_label: Label
 var stats_label: Label
@@ -246,6 +255,7 @@ var touch_buttons := {}
 
 func _ready() -> void:
 	rng.randomize()
+	_load_background_textures()
 	_setup_input()
 	_build_ui()
 	_load_history()
@@ -281,6 +291,11 @@ func _setup_input() -> void:
 	_add_action_joy_button("hold", JOY_BUTTON_Y)
 	_add_action_joy_button("pause", JOY_BUTTON_START)
 	_add_action_joy_button("quit_to_menu", JOY_BUTTON_BACK)
+
+
+func _load_background_textures() -> void:
+	for key in BACKGROUND_PATHS:
+		background_textures[key] = load(BACKGROUND_PATHS[key])
 
 
 func _add_action_key(action: StringName, keycode: Key) -> void:
@@ -1010,25 +1025,36 @@ func _draw_background() -> void:
 	var primary: Color = theme["glow_a"]
 	var secondary: Color = theme["glow_b"]
 	draw_rect(Rect2(Vector2.ZERO, size), bg)
-	_draw_glow_circle(Vector2(size.x * 0.82, size.y * 0.12), size.y * 0.32, primary)
-	_draw_glow_circle(Vector2(size.x * 0.18, size.y * 0.78), size.y * 0.36, secondary)
-	_draw_neon_beam(Vector2(-size.x * 0.08, size.y * 0.28), Vector2(size.x * 0.78, -size.y * 0.10), Color(primary, 0.10), 34.0)
-	_draw_neon_beam(Vector2(size.x * 0.32, size.y * 1.05), Vector2(size.x * 1.10, size.y * 0.34), Color(secondary, 0.09), 46.0)
+	_draw_theme_background_image()
+	draw_rect(Rect2(Vector2.ZERO, size), Color("#000000", 0.14))
 	_draw_background_grid(theme)
-	_draw_background_blocks(primary, secondary)
 	_draw_particle_sparks(primary, secondary)
 	_draw_vignette()
 
 
+func _draw_theme_background_image() -> void:
+	var key: String = THEME_KEYS[theme_index]
+	var texture: Texture2D = background_textures.get(key)
+	if not texture:
+		return
+	var texture_size := texture.get_size()
+	if texture_size.x <= 0.0 or texture_size.y <= 0.0:
+		return
+	var scale: float = max(size.x / texture_size.x, size.y / texture_size.y)
+	var draw_size := texture_size * scale
+	var draw_pos := (size - draw_size) * 0.5
+	draw_texture_rect(texture, Rect2(draw_pos, draw_size), false)
+
+
 func _draw_background_grid(theme: Dictionary) -> void:
 	for y in range(0, int(size.y), 36):
-		var alpha := 0.32 if y % 144 == 0 else 0.18
+		var alpha := 0.18 if y % 144 == 0 else 0.08
 		draw_line(Vector2(0, y), Vector2(size.x, y), Color(theme["grid"], alpha), 1.0)
 	for x in range(0, int(size.x), 36):
-		var alpha := 0.30 if x % 144 == 0 else 0.15
+		var alpha := 0.16 if x % 144 == 0 else 0.07
 		draw_line(Vector2(x, 0), Vector2(x, size.y), Color(theme["grid_alt"], alpha), 1.0)
 	for y in range(18, int(size.y), 72):
-		draw_line(Vector2(0, y), Vector2(size.x, y - size.x * 0.08), Color(theme["grid"], 0.08), 1.0)
+		draw_line(Vector2(0, y), Vector2(size.x, y - size.x * 0.08), Color(theme["grid"], 0.04), 1.0)
 
 
 func _draw_glow_circle(center: Vector2, radius: float, color: Color) -> void:

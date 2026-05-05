@@ -19,7 +19,7 @@ Drop includes six background themes:
 - Pulse Red / 脉冲红
 - Glacier Cyan / 冰川青
 
-The in-game UI supports English and Chinese.
+Each theme has its own vivid arcade background artwork. The in-game UI supports English and Chinese.
 
 ## Mobile play
 
