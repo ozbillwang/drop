@@ -1,7 +1,9 @@
 .godot/
 .import/
+build/
 export/
 *.tmp
 *.translation
 *.log
+*.uid
 .DS_Store
