@@ -647,20 +647,30 @@ func _award(cleared: int) -> void:
 
 func _clear_lines(target_board: Array) -> int:
 	var cleared := 0
-	for y in range(ROWS - 1, -1, -1):
+	var kept_rows := []
+	for y in ROWS:
 		var full := true
 		for x in COLS:
 			if target_board[y][x] == "":
 				full = false
 				break
 		if full:
-			target_board.remove_at(y)
-			var row := []
-			for x in COLS:
-				row.append("")
-			target_board.push_front(row)
 			cleared += 1
+		else:
+			kept_rows.append(target_board[y])
+	target_board.clear()
+	for i in cleared:
+		target_board.append(_make_empty_row())
+	for row in kept_rows:
+		target_board.append(row)
 	return cleared
+
+
+func _make_empty_row() -> Array:
+	var row := []
+	for x in COLS:
+		row.append("")
+	return row
 
 
 func _add_garbage(target_board: Array, amount: int) -> void:
