@@ -235,6 +235,11 @@ var touch_right_pressed := false
 var touch_soft_pressed := false
 var touch_controls_visible := false
 var bot_clock := 0.0
+var bot_piece := ""
+var bot_pos := Vector2i(5, 1)
+var bot_rot := 0
+var bot_target_x := 5
+var bot_target_rot := 0
 var bot_lines := 0
 var bot_alive := true
 var result_key := ""
@@ -563,6 +568,7 @@ func start_game(new_mode: int) -> void:
 		bot_alive = true
 	bag.clear()
 	next_queue.clear()
+	bot_piece = ""
 	hold_piece = ""
 	hold_locked = false
 	score = 0
@@ -583,6 +589,8 @@ func start_game(new_mode: int) -> void:
 	for i in 5:
 		next_queue.append(_draw_piece())
 	_spawn_piece()
+	if mode == Mode.VERSUS:
+		_spawn_bot_piece()
 	for button in menu_buttons:
 		button.visible = false
 	theme_button.visible = false
@@ -844,21 +852,28 @@ func _add_garbage(target_board: Array, amount: int) -> void:
 
 
 func _process_bot(delta: float) -> void:
-	if not bot_alive:
+	if not bot_alive or bot_piece.is_empty():
 		return
 	bot_clock += delta
-	var speed: float = max(0.38, 1.15 - float(level) * 0.05)
+	var speed: float = max(0.10, 0.34 - float(level) * 0.012)
 	if bot_clock < speed:
 		return
 	bot_clock = 0.0
-	var clears := 0
-	if rng.randf() < 0.58:
-		clears = rng.randi_range(0, 2)
-		for i in clears:
-			_remove_random_bot_line()
-	bot_lines += clears
-	if clears > 1:
-		_add_garbage(board, clears - 1)
+	if bot_rot != bot_target_rot:
+		var next_rot := (bot_rot + 1) % 4
+		if _can_place(bot_piece, bot_pos, next_rot, bot_board):
+			bot_rot = next_rot
+			return
+	if bot_pos.x < bot_target_x and _can_place(bot_piece, bot_pos + Vector2i(1, 0), bot_rot, bot_board):
+		bot_pos.x += 1
+		return
+	if bot_pos.x > bot_target_x and _can_place(bot_piece, bot_pos + Vector2i(-1, 0), bot_rot, bot_board):
+		bot_pos.x -= 1
+		return
+	if _can_place(bot_piece, bot_pos + Vector2i(0, 1), bot_rot, bot_board):
+		bot_pos.y += 1
+	else:
+		_lock_bot_piece()
 	if _board_too_high(bot_board):
 		bot_alive = false
 		_finish_game("you_win")
@@ -866,20 +881,113 @@ func _process_bot(delta: float) -> void:
 		_finish_game("bot_wins")
 
 
-func _remove_random_bot_line() -> void:
-	for y in range(ROWS - 1, 4, -1):
-		var occupied := false
+func _spawn_bot_piece() -> void:
+	bot_piece = _draw_piece()
+	bot_pos = Vector2i(5, 1)
+	bot_rot = 0
+	_choose_bot_target()
+	if not _can_place(bot_piece, bot_pos, bot_rot, bot_board):
+		bot_alive = false
+		_finish_game("you_win")
+
+
+func _choose_bot_target() -> void:
+	var best_score := -999999
+	var best_x := 5
+	var best_rot := 0
+	for rot in 4:
+		for x in range(-2, COLS + 2):
+			var pos := Vector2i(x, 1)
+			if not _can_place(bot_piece, pos, rot, bot_board):
+				continue
+			while _can_place(bot_piece, pos + Vector2i(0, 1), rot, bot_board):
+				pos.y += 1
+			var score_value := _score_bot_landing(bot_piece, pos, rot)
+			if score_value > best_score:
+				best_score = score_value
+				best_x = x
+				best_rot = rot
+	bot_target_x = best_x
+	bot_target_rot = best_rot
+
+
+func _score_bot_landing(piece: String, pos: Vector2i, rot: int) -> int:
+	var test_board := _copy_board(bot_board)
+	for cell in _piece_cells(piece, pos, rot):
+		if cell.y >= 0 and cell.y < ROWS and cell.x >= 0 and cell.x < COLS:
+			test_board[cell.y][cell.x] = piece
+	var cleared := _count_full_lines(test_board)
+	return cleared * 700 - _aggregate_height(test_board) * 6 - _count_holes(test_board) * 42 - _bumpiness(test_board) * 7 + rng.randi_range(0, 12)
+
+
+func _lock_bot_piece() -> void:
+	for cell in _piece_cells(bot_piece, bot_pos, bot_rot):
+		if cell.y >= 0 and cell.y < ROWS and cell.x >= 0 and cell.x < COLS:
+			bot_board[cell.y][cell.x] = bot_piece
+	var cleared := _clear_lines(bot_board)
+	bot_lines += cleared
+	if cleared > 1:
+		_add_garbage(board, cleared - 1)
+	_spawn_bot_piece()
+
+
+func _copy_board(source_board: Array) -> Array:
+	var copy := []
+	for y in ROWS:
+		copy.append(source_board[y].duplicate())
+	return copy
+
+
+func _count_full_lines(target_board: Array) -> int:
+	var count := 0
+	for y in ROWS:
+		var full := true
 		for x in COLS:
-			if bot_board[y][x] != "":
-				occupied = true
+			if target_board[y][x] == "":
+				full = false
 				break
-		if occupied:
-			bot_board.remove_at(y)
-			var row := []
-			for x in COLS:
-				row.append("")
-			bot_board.push_front(row)
-			return
+		if full:
+			count += 1
+	return count
+
+
+func _column_heights(target_board: Array) -> Array[int]:
+	var heights: Array[int] = []
+	for x in COLS:
+		var height := 0
+		for y in ROWS:
+			if target_board[y][x] != "":
+				height = ROWS - y
+				break
+		heights.append(height)
+	return heights
+
+
+func _aggregate_height(target_board: Array) -> int:
+	var total := 0
+	for height in _column_heights(target_board):
+		total += height
+	return total
+
+
+func _count_holes(target_board: Array) -> int:
+	var holes := 0
+	for x in COLS:
+		var seen_block := false
+		for y in ROWS:
+			if target_board[y][x] != "":
+				seen_block = true
+			elif seen_block:
+				holes += 1
+	return holes
+
+
+func _bumpiness(target_board: Array) -> int:
+	var heights := _column_heights(target_board)
+	var total := 0
+	for i in range(heights.size() - 1):
+		total += abs(heights[i] - heights[i + 1])
+	return total
 
 
 func _board_too_high(target_board: Array) -> bool:
@@ -1012,7 +1120,7 @@ func _draw() -> void:
 	_draw_board(board, BOARD_ORIGIN, true)
 	_draw_side_panel()
 	if mode == Mode.VERSUS:
-		_draw_board(bot_board, Vector2(950, 112), false, 16)
+		_draw_bot_board(Vector2(950, 112), 16)
 	if screen == Screen.PAUSED:
 		_draw_overlay(_text("paused"))
 	elif screen == Screen.GAME_OVER:
@@ -1139,6 +1247,23 @@ func _draw_board(target_board: Array, origin: Vector2, include_active: bool, blo
 			if cell.y >= 0:
 				var piece_rect := Rect2(origin + Vector2(cell.x * block_size, cell.y * block_size), Vector2(block_size, block_size))
 				_draw_block(piece_rect, PALETTE[active])
+
+
+func _draw_bot_board(origin: Vector2, block_size: int) -> void:
+	_draw_board(bot_board, origin, false, block_size)
+	if bot_piece.is_empty() or screen == Screen.MENU:
+		return
+	var ghost := bot_pos
+	while _can_place(bot_piece, ghost + Vector2i(0, 1), bot_rot, bot_board):
+		ghost.y += 1
+	for cell in _piece_cells(bot_piece, ghost, bot_rot):
+		if cell.y >= 0:
+			var ghost_rect := Rect2(origin + Vector2(cell.x * block_size, cell.y * block_size), Vector2(block_size, block_size))
+			draw_rect(ghost_rect.grow(-2), Color(PALETTE[bot_piece], 0.12), false, 1.5)
+	for cell in _piece_cells(bot_piece, bot_pos, bot_rot):
+		if cell.y >= 0:
+			var piece_rect := Rect2(origin + Vector2(cell.x * block_size, cell.y * block_size), Vector2(block_size, block_size))
+			_draw_block(piece_rect, PALETTE[bot_piece])
 
 
 func _draw_block(rect: Rect2, color: Color, muted: bool = false) -> void:
