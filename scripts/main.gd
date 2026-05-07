@@ -675,16 +675,19 @@ func _process(delta: float) -> void:
 	queue_redraw()
 
 
-func _unhandled_input(event: InputEvent) -> void:
+func _input(event: InputEvent) -> void:
 	if event.is_action_pressed("cycle_theme"):
 		_cycle_theme()
+		accept_event()
 		return
 	if event.is_action_pressed("toggle_language"):
 		_toggle_language()
+		accept_event()
 		return
 	if event.is_action_pressed("quit_to_menu"):
 		if screen == Screen.PLAYING or screen == Screen.PAUSED or screen == Screen.GAME_OVER:
 			_show_menu()
+		accept_event()
 		return
 	if event.is_action_pressed("pause"):
 		if screen == Screen.PLAYING:
@@ -698,6 +701,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		elif screen == Screen.GAME_OVER:
 			_show_menu()
 		queue_redraw()
+		accept_event()
 		return
 	if screen == Screen.MENU:
 		if event.is_action_pressed("soft_drop"):
@@ -708,9 +712,13 @@ func _unhandled_input(event: InputEvent) -> void:
 			menu_buttons[selected_mode].grab_focus()
 		elif event.is_action_pressed("ui_accept"):
 			start_game(selected_mode)
+		else:
+			return
+		accept_event()
 		return
 	if screen != Screen.PLAYING:
 		return
+	var handled := true
 	if event.is_action_pressed("move_left"):
 		_try_move(Vector2i(-1, 0))
 		_start_horizontal_repeat(-1)
@@ -725,7 +733,12 @@ func _unhandled_input(event: InputEvent) -> void:
 		_hard_drop()
 	elif event.is_action_pressed("hold"):
 		_hold()
+	else:
+		handled = false
+	if not handled:
+		return
 	queue_redraw()
+	accept_event()
 
 
 func _is_resume_event(event: InputEvent) -> bool:
