@@ -831,7 +831,7 @@ func _lock_piece() -> void:
 			board[cell.y][cell.x] = active
 	var cleared := _clear_lines(board)
 	_award(cleared)
-	if mode == Mode.SPRINT and _count_filled(board) == 0:
+	if mode == Mode.SPRINT and _count_garbage(board) == 0:
 		_finish_game("board_cleared")
 		return
 	if mode == Mode.VERSUS and cleared > 1:
@@ -1040,6 +1040,15 @@ func _count_filled(target_board: Array) -> int:
 	for y in ROWS:
 		for x in COLS:
 			if target_board[y][x] != "":
+				count += 1
+	return count
+
+
+func _count_garbage(target_board: Array) -> int:
+	var count := 0
+	for y in ROWS:
+		for x in COLS:
+			if target_board[y][x] == "G":
 				count += 1
 	return count
 
