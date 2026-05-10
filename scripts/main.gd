@@ -106,10 +106,10 @@ const THEME_DATA := {
 const I18N := {
 	"en": {
 		"pick_mode": "Pick a mode",
-		"controls_hint": "Keyboard: arrows / Z X / space / C / P / Q. Gamepad: D-pad / face buttons / Start / Select. T theme, L language.",
-		"play_hint": "Clear lines, build combos, use Hold, and watch the next queue. Start/Esc pause, Q/Select quit.",
-		"paused_hint": "Paused. Press P to resume, Esc / Start / Select / Q for menu.",
-		"game_over_hint": "Press Esc / Start to return to the mode menu.",
+		"controls_hint": "Keyboard: arrows / Z X / space / C / P / Q. Controller: D-pad, A drop/confirm, X/B rotate, LB/RB hold, Start pause, Back quit.",
+		"play_hint": "Clear lines, build combos, use Hold, and watch the next queue. Start/Esc pause, Q/Back quit.",
+		"paused_hint": "Paused. Press P / A to resume, Esc / Start / Back / Q for menu.",
+		"game_over_hint": "Press A / Esc / Start to return to the mode menu.",
 		"tagline": "Fast, colorful block-clearing for couch and controller.",
 		"mode_summary": "Modes: speed survival, messy board cleanup, and bot battle.",
 		"mode_marathon": "Marathon",
@@ -136,10 +136,10 @@ const I18N := {
 	},
 	"zh": {
 		"pick_mode": "选择玩法",
-		"controls_hint": "键盘：方向键 / Z X / 空格 / C / P / Q。手柄：十字键 / 功能键 / Start / Select。T 换主题，L 切语言。",
-		"play_hint": "消行、连击、使用暂存，并留意下一个方块队列。Start/Esc 暂停，Q/Select 放弃。",
-		"paused_hint": "已暂停。按 P 继续，按 Esc / Start / Select / Q 返回菜单。",
-		"game_over_hint": "按 Esc / Start 返回玩法菜单。",
+		"controls_hint": "键盘：方向键 / Z X / 空格 / C / P / Q。手柄：十字键，A 硬降/确认，X/B 旋转，LB/RB 暂存，Start 暂停，Back 放弃。",
+		"play_hint": "消行、连击、使用暂存，并留意下一个方块队列。Start/Esc 暂停，Q/Back 放弃。",
+		"paused_hint": "已暂停。按 P / A 继续，按 Esc / Start / Back / Q 返回菜单。",
+		"game_over_hint": "按 A / Esc / Start 返回玩法菜单。",
 		"tagline": "快节奏、色彩鲜活，适合沙发和手柄的落块消除。",
 		"mode_summary": "玩法：加速生存、残局清理、Bot 对战。",
 		"mode_marathon": "单人挑战",
@@ -290,15 +290,23 @@ func _setup_input() -> void:
 	_add_action_key("toggle_language", KEY_L)
 	_add_action_key("ui_accept", KEY_ENTER)
 	_add_action_key("ui_accept", KEY_SPACE)
+	_add_action_key("menu_up", KEY_UP)
+	_add_action_key("menu_down", KEY_DOWN)
 	_add_action_joy_button("move_left", JOY_BUTTON_DPAD_LEFT)
 	_add_action_joy_button("move_right", JOY_BUTTON_DPAD_RIGHT)
 	_add_action_joy_button("soft_drop", JOY_BUTTON_DPAD_DOWN)
+	_add_action_joy_button("menu_up", JOY_BUTTON_DPAD_UP)
+	_add_action_joy_button("menu_down", JOY_BUTTON_DPAD_DOWN)
 	_add_action_joy_button("hard_drop", JOY_BUTTON_A)
+	_add_action_joy_button("ui_accept", JOY_BUTTON_A)
+	_add_action_joy_button("ui_accept", JOY_BUTTON_START)
 	_add_action_joy_button("rotate_cw", JOY_BUTTON_X)
 	_add_action_joy_button("rotate_ccw", JOY_BUTTON_B)
-	_add_action_joy_button("hold", JOY_BUTTON_Y)
+	_add_action_joy_button("hold", JOY_BUTTON_LEFT_SHOULDER)
+	_add_action_joy_button("hold", JOY_BUTTON_RIGHT_SHOULDER)
 	_add_action_joy_button("pause", JOY_BUTTON_START)
 	_add_action_joy_button("quit_to_menu", JOY_BUTTON_BACK)
+	_add_action_joy_button("quit_to_menu", JOY_BUTTON_GUIDE)
 
 
 func _load_background_textures() -> void:
@@ -314,7 +322,7 @@ func _add_action_key(action: StringName, keycode: Key) -> void:
 	InputMap.action_add_event(action, event)
 
 
-func _add_action_joy_button(action: StringName, button_index: JoyButton) -> void:
+func _add_action_joy_button(action: StringName, button_index: int) -> void:
 	if not InputMap.has_action(action):
 		InputMap.add_action(action)
 	var event := InputEventJoypadButton.new()
@@ -700,14 +708,20 @@ func _input(event: InputEvent) -> void:
 				_show_menu()
 		elif screen == Screen.GAME_OVER:
 			_show_menu()
+		else:
+			return
 		queue_redraw()
 		accept_event()
 		return
+	if screen == Screen.GAME_OVER and event.is_action_pressed("ui_accept"):
+		_show_menu()
+		accept_event()
+		return
 	if screen == Screen.MENU:
-		if event.is_action_pressed("soft_drop"):
+		if event.is_action_pressed("menu_down") or event.is_action_pressed("soft_drop"):
 			selected_mode = (selected_mode + 1) % 3
 			menu_buttons[selected_mode].grab_focus()
-		elif event.is_action_pressed("rotate_cw"):
+		elif event.is_action_pressed("menu_up"):
 			selected_mode = (selected_mode + 2) % 3
 			menu_buttons[selected_mode].grab_focus()
 		elif event.is_action_pressed("ui_accept"):
@@ -744,6 +758,8 @@ func _input(event: InputEvent) -> void:
 func _is_resume_event(event: InputEvent) -> bool:
 	if event is InputEventKey:
 		return event.physical_keycode == KEY_P
+	if event is InputEventJoypadButton:
+		return event.button_index == JOY_BUTTON_A
 	return false
 
 
