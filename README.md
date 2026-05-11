@@ -2,6 +2,12 @@
 
 Drop is a bright, controller-friendly falling-block puzzle game prototype built with Godot 4.
 
+## Demo
+
+<video src="assets/demo/drop-demo.mp4" controls width="720"></video>
+
+[Watch the demo video](assets/demo/drop-demo.mp4)
+
 ## Current modes
 
 - Marathon: survive as the drop speed increases over time.
@@ -47,11 +53,13 @@ Keyboard:
 
 Gamepad:
 
-- Move: D-pad
-- Soft drop: D-pad down
-- Hard drop / rotate / hold: face buttons
+- Move: D-pad or left stick
+- Soft drop: D-pad down or left stick down
+- Hard drop / confirm: A
+- Rotate: X/B
+- Hold: LB/RB
 - Pause/back: Start
-- Give up and return to menu: Select/Back
+- Give up and return to menu: Select/Back or Guide
 
 ## Run locally
 
