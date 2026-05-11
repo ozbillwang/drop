@@ -4,9 +4,9 @@ Drop is a bright, controller-friendly falling-block puzzle game prototype built 
 
 ## Demo
 
-<video src="assets/demo/drop-demo.mp4" controls width="720"></video>
+![Drop gameplay demo](assets/demo/drop-demo.gif)
 
-[Watch the demo video](assets/demo/drop-demo.mp4)
+[Watch the MP4 demo](assets/demo/drop-demo.mp4)
 
 ## Current modes
 
