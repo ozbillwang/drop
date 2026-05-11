@@ -297,6 +297,11 @@ func _setup_input() -> void:
 	_add_action_joy_button("soft_drop", JOY_BUTTON_DPAD_DOWN)
 	_add_action_joy_button("menu_up", JOY_BUTTON_DPAD_UP)
 	_add_action_joy_button("menu_down", JOY_BUTTON_DPAD_DOWN)
+	_add_action_joy_axis("move_left", JOY_AXIS_LEFT_X, -1.0)
+	_add_action_joy_axis("move_right", JOY_AXIS_LEFT_X, 1.0)
+	_add_action_joy_axis("soft_drop", JOY_AXIS_LEFT_Y, 1.0)
+	_add_action_joy_axis("menu_up", JOY_AXIS_LEFT_Y, -1.0)
+	_add_action_joy_axis("menu_down", JOY_AXIS_LEFT_Y, 1.0)
 	_add_action_joy_button("hard_drop", JOY_BUTTON_A)
 	_add_action_joy_button("ui_accept", JOY_BUTTON_A)
 	_add_action_joy_button("ui_accept", JOY_BUTTON_START)
@@ -327,6 +332,16 @@ func _add_action_joy_button(action: StringName, button_index: int) -> void:
 		InputMap.add_action(action)
 	var event := InputEventJoypadButton.new()
 	event.button_index = button_index
+	InputMap.action_add_event(action, event)
+
+
+func _add_action_joy_axis(action: StringName, axis: int, axis_value: float) -> void:
+	if not InputMap.has_action(action):
+		InputMap.add_action(action)
+	InputMap.action_set_deadzone(action, 0.35)
+	var event := InputEventJoypadMotion.new()
+	event.axis = axis
+	event.axis_value = axis_value
 	InputMap.action_add_event(action, event)
 
 
@@ -697,6 +712,19 @@ func _input(event: InputEvent) -> void:
 			_show_menu()
 		accept_event()
 		return
+	if screen == Screen.MENU:
+		if event.is_action_pressed("menu_down") or event.is_action_pressed("soft_drop"):
+			selected_mode = (selected_mode + 1) % 3
+			menu_buttons[selected_mode].grab_focus()
+		elif event.is_action_pressed("menu_up"):
+			selected_mode = (selected_mode + 2) % 3
+			menu_buttons[selected_mode].grab_focus()
+		elif event.is_action_pressed("ui_accept"):
+			start_game(selected_mode)
+		else:
+			return
+		accept_event()
+		return
 	if event.is_action_pressed("pause"):
 		if screen == Screen.PLAYING:
 			screen = Screen.PAUSED
@@ -715,19 +743,6 @@ func _input(event: InputEvent) -> void:
 		return
 	if screen == Screen.GAME_OVER and event.is_action_pressed("ui_accept"):
 		_show_menu()
-		accept_event()
-		return
-	if screen == Screen.MENU:
-		if event.is_action_pressed("menu_down") or event.is_action_pressed("soft_drop"):
-			selected_mode = (selected_mode + 1) % 3
-			menu_buttons[selected_mode].grab_focus()
-		elif event.is_action_pressed("menu_up"):
-			selected_mode = (selected_mode + 2) % 3
-			menu_buttons[selected_mode].grab_focus()
-		elif event.is_action_pressed("ui_accept"):
-			start_game(selected_mode)
-		else:
-			return
 		accept_event()
 		return
 	if screen != Screen.PLAYING:
@@ -850,8 +865,10 @@ func _lock_piece() -> void:
 	if mode == Mode.SPRINT and _count_garbage(board) == 0:
 		_finish_game("board_cleared")
 		return
-	if mode == Mode.VERSUS and cleared > 1:
-		_add_garbage(bot_board, cleared - 1)
+	if mode == Mode.VERSUS and cleared > 0:
+		_attack_bot(cleared)
+		if screen != Screen.PLAYING:
+			return
 	_spawn_piece()
 
 
@@ -903,6 +920,37 @@ func _add_garbage(target_board: Array, amount: int) -> void:
 		for x in COLS:
 			row.append("" if x == hole else "G")
 		target_board.append(row)
+
+
+func _attack_bot(amount: int) -> void:
+	_add_garbage(bot_board, amount)
+	if not bot_piece.is_empty():
+		_lift_bot_piece_until_valid(amount)
+		if not _can_place(bot_piece, bot_pos, bot_rot, bot_board):
+			bot_alive = false
+			_finish_game("you_win")
+
+
+func _attack_player(amount: int) -> void:
+	_add_garbage(board, amount)
+	if not active.is_empty():
+		_lift_player_piece_until_valid(amount)
+		if not _can_place(active, active_pos, active_rot, board):
+			_finish_game("bot_wins")
+
+
+func _lift_player_piece_until_valid(max_steps: int) -> void:
+	for i in max_steps:
+		if _can_place(active, active_pos, active_rot, board):
+			return
+		active_pos.y -= 1
+
+
+func _lift_bot_piece_until_valid(max_steps: int) -> void:
+	for i in max_steps:
+		if _can_place(bot_piece, bot_pos, bot_rot, bot_board):
+			return
+		bot_pos.y -= 1
 
 
 func _process_bot(delta: float) -> void:
@@ -979,8 +1027,10 @@ func _lock_bot_piece() -> void:
 			bot_board[cell.y][cell.x] = bot_piece
 	var cleared := _clear_lines(bot_board)
 	bot_lines += cleared
-	if cleared > 1:
-		_add_garbage(board, cleared - 1)
+	if cleared > 0:
+		_attack_player(cleared)
+		if screen != Screen.PLAYING:
+			return
 	_spawn_bot_piece()
 
 
