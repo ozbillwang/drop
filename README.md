@@ -6,8 +6,6 @@ Drop is a bright, controller-friendly falling-block puzzle game prototype built 
 
 ![Drop gameplay demo](assets/demo/drop-demo.gif)
 
-[Watch the MP4 demo](assets/demo/drop-demo.mp4)
-
 ## Current modes
 
 - Marathon: survive as the drop speed increases over time.
