@@ -16,12 +16,12 @@ Drop is a bright, controller-friendly falling-block puzzle game prototype built 
 
 Drop includes six background themes:
 
-- Vital Green / 活力绿
-- Ocean Blue / 海洋蓝
-- Sunrise Orange / 晨光橙
-- Sport Black / 运动黑
-- Pulse Red / 脉冲红
-- Glacier Cyan / 冰川青
+- Vital Green
+- Ocean Blue
+- Sunrise Orange
+- Sport Black
+- Pulse Red
+- Glacier Cyan
 
 Each theme has its own vivid arcade background artwork. The in-game UI supports English and Chinese.
 
