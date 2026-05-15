@@ -12,20 +12,22 @@ const EASY_SCORE_THRESHOLD := 100000
 const EASY_ACCELERATION_DIVISOR := 6.0
 
 enum Screen { MENU, PLAYING, PAUSED, GAME_OVER }
-enum Mode { MARATHON, SPRINT, VERSUS }
+enum Mode { MARATHON, SPRINT, VERSUS, SIX_PACK }
 enum Language { EN, ZH }
 enum Difficulty { EASY, NORMAL }
 
 const MODE_NAMES := {
 	Mode.MARATHON: "Marathon",
 	Mode.SPRINT: "Garbage Sprint",
-	Mode.VERSUS: "Versus Bot"
+	Mode.VERSUS: "Versus Bot",
+	Mode.SIX_PACK: "Six Pack"
 }
 
 const MODE_KEYS := {
 	Mode.MARATHON: "mode_marathon",
 	Mode.SPRINT: "mode_sprint",
-	Mode.VERSUS: "mode_versus"
+	Mode.VERSUS: "mode_versus",
+	Mode.SIX_PACK: "mode_six_pack"
 }
 
 const THEME_KEYS := ["green", "blue", "orange", "black", "red", "cyan"]
@@ -118,6 +120,7 @@ const I18N := {
 		"mode_marathon": "Marathon",
 		"mode_sprint": "Garbage Sprint",
 		"mode_versus": "Versus Bot",
+		"mode_six_pack": "Six Pack",
 		"score": "Score",
 		"lines": "Lines",
 		"level": "Level",
@@ -151,6 +154,7 @@ const I18N := {
 		"mode_marathon": "单人挑战",
 		"mode_sprint": "残局速清",
 		"mode_versus": "Bot 对战",
+		"mode_six_pack": "六格挑战",
 		"score": "分数",
 		"lines": "消行",
 		"level": "等级",
@@ -202,6 +206,14 @@ const PALETTE := {
 	"S": Color("#66f07a"),
 	"T": Color("#a66cff"),
 	"Z": Color("#ff4f8b"),
+	"A": Color("#00e5a8"),
+	"B": Color("#ffca3a"),
+	"D": Color("#ff6f59"),
+	"E": Color("#9b5de5"),
+	"F": Color("#00bbf9"),
+	"H": Color("#f15bb5"),
+	"N": Color("#8ac926"),
+	"P": Color("#ff924c"),
 	"G": Color("#53627d")
 }
 
@@ -213,6 +225,17 @@ const PIECES := {
 	"S": [[Vector2i(0, -1), Vector2i(1, -1), Vector2i(-1, 0), Vector2i(0, 0)]],
 	"T": [[Vector2i(0, -1), Vector2i(-1, 0), Vector2i(0, 0), Vector2i(1, 0)]],
 	"Z": [[Vector2i(-1, -1), Vector2i(0, -1), Vector2i(0, 0), Vector2i(1, 0)]]
+}
+
+const SIX_PACK_PIECES := {
+	"A": [[Vector2i(-1, -1), Vector2i(0, -1), Vector2i(1, -1), Vector2i(-1, 0), Vector2i(0, 0), Vector2i(1, 0)]],
+	"B": [[Vector2i(-2, 0), Vector2i(-1, 0), Vector2i(0, 0), Vector2i(1, 0), Vector2i(2, 0), Vector2i(3, 0)]],
+	"D": [[Vector2i(-1, -1), Vector2i(0, -1), Vector2i(0, 0), Vector2i(1, 0), Vector2i(1, 1), Vector2i(2, 1)]],
+	"E": [[Vector2i(0, -1), Vector2i(-1, 0), Vector2i(0, 0), Vector2i(1, 0), Vector2i(0, 1), Vector2i(0, 2)]],
+	"F": [[Vector2i(-1, -1), Vector2i(1, -1), Vector2i(-1, 0), Vector2i(0, 0), Vector2i(1, 0), Vector2i(0, 1)]],
+	"H": [[Vector2i(-1, -2), Vector2i(-1, -1), Vector2i(-1, 0), Vector2i(-1, 1), Vector2i(0, 1), Vector2i(1, 1)]],
+	"N": [[Vector2i(-1, -1), Vector2i(0, -1), Vector2i(0, 0), Vector2i(1, 0), Vector2i(2, 0), Vector2i(2, 1)]],
+	"P": [[Vector2i(-1, -1), Vector2i(0, -1), Vector2i(-1, 0), Vector2i(0, 0), Vector2i(1, 0), Vector2i(-1, 1)]]
 }
 
 var screen := Screen.MENU
@@ -386,9 +409,9 @@ func _build_ui() -> void:
 	history_box.size = Vector2(270, 390)
 	add_child(history_box)
 
-	for i in 3:
+	for i in MODE_KEYS.size():
 		var button := Button.new()
-		button.position = Vector2(56, 220 + i * 64)
+		button.position = Vector2(56, 210 + i * 56)
 		button.size = Vector2(260, 48)
 		button.pressed.connect(func() -> void:
 			start_game(i)
@@ -397,19 +420,19 @@ func _build_ui() -> void:
 		menu_buttons.append(button)
 
 	difficulty_button = Button.new()
-	difficulty_button.position = Vector2(56, 430)
+	difficulty_button.position = Vector2(56, 448)
 	difficulty_button.size = Vector2(260, 42)
 	difficulty_button.pressed.connect(_cycle_difficulty)
 	add_child(difficulty_button)
 
 	theme_button = Button.new()
-	theme_button.position = Vector2(56, 482)
+	theme_button.position = Vector2(56, 500)
 	theme_button.size = Vector2(260, 42)
 	theme_button.pressed.connect(_cycle_theme)
 	add_child(theme_button)
 
 	language_button = Button.new()
-	language_button.position = Vector2(56, 534)
+	language_button.position = Vector2(56, 552)
 	language_button.size = Vector2(260, 42)
 	language_button.pressed.connect(_toggle_language)
 	add_child(language_button)
@@ -478,6 +501,8 @@ func _legacy_mode_name(raw: Variant) -> String:
 			return _mode_name(Mode.SPRINT)
 		"Versus Bot":
 			return _mode_name(Mode.VERSUS)
+		"Six Pack":
+			return _mode_name(Mode.SIX_PACK)
 	return str(raw)
 
 
@@ -705,9 +730,15 @@ func _make_empty_board() -> Array:
 
 func _draw_piece() -> String:
 	if bag.is_empty():
-		bag = ["I", "J", "L", "O", "S", "T", "Z"]
+		bag = _piece_bag()
 		bag.shuffle()
 	return bag.pop_back()
+
+
+func _piece_bag() -> Array[String]:
+	if mode == Mode.SIX_PACK:
+		return ["A", "B", "D", "E", "F", "H", "N", "P"]
+	return ["I", "J", "L", "O", "S", "T", "Z"]
 
 
 func _peek_versus_piece(index: int) -> String:
@@ -771,10 +802,10 @@ func _input(event: InputEvent) -> void:
 		return
 	if screen == Screen.MENU:
 		if event.is_action_pressed("menu_down") or event.is_action_pressed("soft_drop"):
-			selected_mode = (selected_mode + 1) % 3
+			selected_mode = (selected_mode + 1) % MODE_KEYS.size()
 			menu_buttons[selected_mode].grab_focus()
 		elif event.is_action_pressed("menu_up"):
-			selected_mode = (selected_mode + 2) % 3
+			selected_mode = (selected_mode + MODE_KEYS.size() - 1) % MODE_KEYS.size()
 			menu_buttons[selected_mode].grab_focus()
 		elif event.is_action_pressed("menu_left") or event.is_action_pressed("menu_right"):
 			_cycle_difficulty()
@@ -938,9 +969,18 @@ func _award(cleared: int) -> void:
 	combo += 1
 	lines += cleared
 	level = 1 + lines / 10
-	var base: int = [0, 100, 300, 500, 800][cleared]
+	var base := _line_clear_score(cleared)
 	score += base * level + max(combo, 0) * 50
 	_update_drop_delay()
+
+
+func _line_clear_score(cleared: int) -> int:
+	if cleared <= 0:
+		return 0
+	var table := [0, 100, 300, 500, 800]
+	if cleared < table.size():
+		return table[cleared]
+	return 800 + (cleared - 4) * 400
 
 
 func _update_drop_delay() -> void:
@@ -1210,7 +1250,7 @@ func _can_place(piece: String, pos: Vector2i, rot: int, target_board: Array) -> 
 
 func _piece_cells(piece: String, pos: Vector2i, rot: int) -> Array[Vector2i]:
 	var cells: Array[Vector2i] = []
-	for base in PIECES[piece][0]:
+	for base in _piece_shape(piece):
 		var p: Vector2i = base
 		for i in rot % 4:
 			p = Vector2i(-p.y, p.x)
@@ -1218,6 +1258,12 @@ func _piece_cells(piece: String, pos: Vector2i, rot: int) -> Array[Vector2i]:
 			p = base
 		cells.append(pos + p)
 	return cells
+
+
+func _piece_shape(piece: String) -> Array:
+	if SIX_PACK_PIECES.has(piece):
+		return SIX_PACK_PIECES[piece][0]
+	return PIECES[piece][0]
 
 
 func _ghost_pos() -> Vector2i:
@@ -1416,7 +1462,7 @@ func _draw_vignette() -> void:
 func _draw_menu() -> void:
 	var theme := _theme_data()
 	draw_string(get_theme_default_font(), Vector2(56, 180), _text("tagline"), HORIZONTAL_ALIGNMENT_LEFT, -1, 22, theme["text"])
-	draw_string(get_theme_default_font(), Vector2(56, 600), _text("mode_summary"), HORIZONTAL_ALIGNMENT_LEFT, -1, 18, theme["muted"])
+	draw_string(get_theme_default_font(), Vector2(56, 618), _text("mode_summary"), HORIZONTAL_ALIGNMENT_LEFT, -1, 18, theme["muted"])
 
 
 func _draw_board(target_board: Array, origin: Vector2, include_active: bool, block_size: int = BLOCK) -> void:
