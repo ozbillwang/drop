@@ -1016,6 +1016,9 @@ func _line_clear_score(cleared: int) -> int:
 
 
 func _update_drop_delay() -> void:
+	if mode == Mode.SIX_PACK:
+		drop_delay = 0.8
+		return
 	var normal_delay := _normal_drop_delay(level)
 	if mode != Mode.MARATHON or difficulty != Difficulty.EASY:
 		drop_delay = normal_delay
