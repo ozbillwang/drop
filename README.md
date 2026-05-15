@@ -11,7 +11,7 @@ Drop is a bright, controller-friendly falling-block puzzle game prototype built 
 - Marathon: survive as the drop speed increases over time.
 - Garbage Sprint: start with a messy board and clear it as quickly as possible.
 - Versus Bot: clear multiple lines to send garbage to a simple bot opponent.
-- Six Pack: a solo challenge using six-block connected pieces instead of four-block pieces.
+- Six Pack: a solo challenge using simpler 4-6 block connected pieces instead of only four-block pieces.
 
 ## Difficulty
 
