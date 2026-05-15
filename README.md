@@ -53,7 +53,7 @@ Keyboard:
 - Give up and return to menu: Q
 - Cycle theme: T
 - Toggle language: L
-- Change menu difficulty: Left/Right
+- Menu navigation: Up/Down, Enter/Space to activate the selected item
 
 Gamepad:
 
@@ -64,7 +64,7 @@ Gamepad:
 - Hold: LB/RB
 - Pause/back: Start
 - Give up and return to menu: Select/Back or Guide
-- Change menu difficulty: D-pad left/right or left stick left/right
+- Menu navigation: D-pad/left stick up/down, A to activate the selected item
 
 ## Run locally
 

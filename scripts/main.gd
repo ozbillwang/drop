@@ -111,7 +111,7 @@ const THEME_DATA := {
 const I18N := {
 	"en": {
 		"pick_mode": "Pick a mode",
-		"controls_hint": "Keyboard: arrows / Z X / space / C / P / Q. Controller: D-pad, A confirm/drop, X/B rotate, LB/RB hold. Menu left/right changes difficulty.",
+		"controls_hint": "Keyboard: arrows / Z X / space / C / P / Q. Controller: D-pad, A confirm/drop, X/B rotate, LB/RB hold. Menu: up/down selects, A changes selected settings.",
 		"play_hint": "Clear lines, build combos, use Hold, and watch the next queue. Start/Esc pause, Q/Back quit.",
 		"paused_hint": "Paused. Press P / A to resume, Esc / Start / Back / Q for menu.",
 		"game_over_hint": "Press A / Esc / Start to return to the mode menu.",
@@ -145,7 +145,7 @@ const I18N := {
 	},
 	"zh": {
 		"pick_mode": "选择玩法",
-		"controls_hint": "键盘：方向键 / Z X / 空格 / C / P / Q。手柄：十字键，A 确认/硬降，X/B 旋转，LB/RB 暂存。菜单左右键切难度。",
+		"controls_hint": "键盘：方向键 / Z X / 空格 / C / P / Q。手柄：十字键，A 确认/硬降，X/B 旋转，LB/RB 暂存。菜单上下选择，A 切换设置。",
 		"play_hint": "消行、连击、使用暂存，并留意下一个方块队列。Start/Esc 暂停，Q/Back 放弃。",
 		"paused_hint": "已暂停。按 P / A 继续，按 Esc / Start / Back / Q 返回菜单。",
 		"game_over_hint": "按 A / Esc / Start 返回玩法菜单。",
@@ -241,6 +241,7 @@ const SIX_PACK_PIECES := {
 var screen := Screen.MENU
 var mode := Mode.MARATHON
 var selected_mode := 0
+var selected_menu_item := 0
 var language := Language.EN
 var difficulty := Difficulty.NORMAL
 var theme_index := 0
@@ -556,6 +557,37 @@ func _toggle_language() -> void:
 	queue_redraw()
 
 
+func _menu_item_count() -> int:
+	return menu_buttons.size() + 3
+
+
+func _focus_menu_item(index: int) -> void:
+	if _menu_item_count() == 0:
+		return
+	selected_menu_item = wrapi(index, 0, _menu_item_count())
+	if selected_menu_item < menu_buttons.size():
+		selected_mode = selected_menu_item
+		menu_buttons[selected_mode].grab_focus()
+	elif selected_menu_item == menu_buttons.size():
+		difficulty_button.grab_focus()
+	elif selected_menu_item == menu_buttons.size() + 1:
+		theme_button.grab_focus()
+	else:
+		language_button.grab_focus()
+
+
+func _activate_menu_item() -> void:
+	if selected_menu_item < menu_buttons.size():
+		selected_mode = selected_menu_item
+		start_game(selected_mode)
+	elif selected_menu_item == menu_buttons.size():
+		_cycle_difficulty()
+	elif selected_menu_item == menu_buttons.size() + 1:
+		_cycle_theme()
+	else:
+		_toggle_language()
+
+
 func _should_show_touch_controls() -> bool:
 	return OS.get_name() in ["Android", "iOS"] or DisplayServer.is_touchscreen_available()
 
@@ -657,6 +689,7 @@ func _show_menu() -> void:
 	language_button.visible = true
 	_refresh_static_text()
 	_update_history_ui()
+	_focus_menu_item(selected_menu_item)
 	queue_redraw()
 
 
@@ -802,15 +835,13 @@ func _input(event: InputEvent) -> void:
 		return
 	if screen == Screen.MENU:
 		if event.is_action_pressed("menu_down") or event.is_action_pressed("soft_drop"):
-			selected_mode = (selected_mode + 1) % MODE_KEYS.size()
-			menu_buttons[selected_mode].grab_focus()
+			_focus_menu_item(selected_menu_item + 1)
 		elif event.is_action_pressed("menu_up"):
-			selected_mode = (selected_mode + MODE_KEYS.size() - 1) % MODE_KEYS.size()
-			menu_buttons[selected_mode].grab_focus()
-		elif event.is_action_pressed("menu_left") or event.is_action_pressed("menu_right"):
+			_focus_menu_item(selected_menu_item - 1)
+		elif (event.is_action_pressed("menu_left") or event.is_action_pressed("menu_right")) and selected_menu_item == menu_buttons.size():
 			_cycle_difficulty()
 		elif event.is_action_pressed("ui_accept"):
-			start_game(selected_mode)
+			_activate_menu_item()
 		else:
 			return
 		accept_event()
