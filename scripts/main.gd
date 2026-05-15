@@ -8,10 +8,13 @@ const HISTORY_PATH := "user://scores.json"
 const MAX_HISTORY := 10
 const MOVE_REPEAT_DELAY := 0.18
 const MOVE_REPEAT_INTERVAL := 0.06
+const EASY_SCORE_THRESHOLD := 100000
+const EASY_ACCELERATION_DIVISOR := 6.0
 
 enum Screen { MENU, PLAYING, PAUSED, GAME_OVER }
 enum Mode { MARATHON, SPRINT, VERSUS }
 enum Language { EN, ZH }
+enum Difficulty { EASY, NORMAL }
 
 const MODE_NAMES := {
 	Mode.MARATHON: "Marathon",
@@ -106,7 +109,7 @@ const THEME_DATA := {
 const I18N := {
 	"en": {
 		"pick_mode": "Pick a mode",
-		"controls_hint": "Keyboard: arrows / Z X / space / C / P / Q. Controller: D-pad, A drop/confirm, X/B rotate, LB/RB hold, Start pause, Back quit.",
+		"controls_hint": "Keyboard: arrows / Z X / space / C / P / Q. Controller: D-pad, A confirm/drop, X/B rotate, LB/RB hold. Menu left/right changes difficulty.",
 		"play_hint": "Clear lines, build combos, use Hold, and watch the next queue. Start/Esc pause, Q/Back quit.",
 		"paused_hint": "Paused. Press P / A to resume, Esc / Start / Back / Q for menu.",
 		"game_over_hint": "Press A / Esc / Start to return to the mode menu.",
@@ -124,6 +127,9 @@ const I18N := {
 		"bot": "Bot",
 		"history": "Best Drops",
 		"no_scores": "No scores yet",
+		"difficulty": "Marathon difficulty",
+		"easy": "Easy",
+		"normal": "Normal",
 		"theme": "Theme",
 		"language": "Language",
 		"english": "English",
@@ -136,7 +142,7 @@ const I18N := {
 	},
 	"zh": {
 		"pick_mode": "选择玩法",
-		"controls_hint": "键盘：方向键 / Z X / 空格 / C / P / Q。手柄：十字键，A 硬降/确认，X/B 旋转，LB/RB 暂存，Start 暂停，Back 放弃。",
+		"controls_hint": "键盘：方向键 / Z X / 空格 / C / P / Q。手柄：十字键，A 确认/硬降，X/B 旋转，LB/RB 暂存。菜单左右键切难度。",
 		"play_hint": "消行、连击、使用暂存，并留意下一个方块队列。Start/Esc 暂停，Q/Back 放弃。",
 		"paused_hint": "已暂停。按 P / A 继续，按 Esc / Start / Back / Q 返回菜单。",
 		"game_over_hint": "按 A / Esc / Start 返回玩法菜单。",
@@ -154,6 +160,9 @@ const I18N := {
 		"bot": "Bot",
 		"history": "历史高分",
 		"no_scores": "暂无分数",
+		"difficulty": "单人难度",
+		"easy": "容易",
+		"normal": "普通",
 		"theme": "背景",
 		"language": "语言",
 		"english": "English",
@@ -210,6 +219,7 @@ var screen := Screen.MENU
 var mode := Mode.MARATHON
 var selected_mode := 0
 var language := Language.EN
+var difficulty := Difficulty.NORMAL
 var theme_index := 0
 var board: Array = []
 var bot_board: Array = []
@@ -230,6 +240,8 @@ var combo := -1
 var drop_delay := 0.8
 var drop_clock := 0.0
 var soft_clock := 0.0
+var easy_slowdown_start_level := 0
+var easy_slowdown_start_delay := 0.8
 var move_repeat_dir := 0
 var move_repeat_clock := 0.0
 var move_repeat_started := false
@@ -255,6 +267,7 @@ var stats_label: Label
 var hint_label: Label
 var history_box: VBoxContainer
 var menu_buttons: Array[Button] = []
+var difficulty_button: Button
 var theme_button: Button
 var language_button: Button
 var touch_root: Control
@@ -292,16 +305,22 @@ func _setup_input() -> void:
 	_add_action_key("ui_accept", KEY_SPACE)
 	_add_action_key("menu_up", KEY_UP)
 	_add_action_key("menu_down", KEY_DOWN)
+	_add_action_key("menu_left", KEY_LEFT)
+	_add_action_key("menu_right", KEY_RIGHT)
 	_add_action_joy_button("move_left", JOY_BUTTON_DPAD_LEFT)
 	_add_action_joy_button("move_right", JOY_BUTTON_DPAD_RIGHT)
 	_add_action_joy_button("soft_drop", JOY_BUTTON_DPAD_DOWN)
 	_add_action_joy_button("menu_up", JOY_BUTTON_DPAD_UP)
 	_add_action_joy_button("menu_down", JOY_BUTTON_DPAD_DOWN)
+	_add_action_joy_button("menu_left", JOY_BUTTON_DPAD_LEFT)
+	_add_action_joy_button("menu_right", JOY_BUTTON_DPAD_RIGHT)
 	_add_action_joy_axis("move_left", JOY_AXIS_LEFT_X, -1.0)
 	_add_action_joy_axis("move_right", JOY_AXIS_LEFT_X, 1.0)
 	_add_action_joy_axis("soft_drop", JOY_AXIS_LEFT_Y, 1.0)
 	_add_action_joy_axis("menu_up", JOY_AXIS_LEFT_Y, -1.0)
 	_add_action_joy_axis("menu_down", JOY_AXIS_LEFT_Y, 1.0)
+	_add_action_joy_axis("menu_left", JOY_AXIS_LEFT_X, -1.0)
+	_add_action_joy_axis("menu_right", JOY_AXIS_LEFT_X, 1.0)
 	_add_action_joy_button("hard_drop", JOY_BUTTON_A)
 	_add_action_joy_button("ui_accept", JOY_BUTTON_A)
 	_add_action_joy_button("ui_accept", JOY_BUTTON_START)
@@ -377,14 +396,20 @@ func _build_ui() -> void:
 		add_child(button)
 		menu_buttons.append(button)
 
+	difficulty_button = Button.new()
+	difficulty_button.position = Vector2(56, 430)
+	difficulty_button.size = Vector2(260, 42)
+	difficulty_button.pressed.connect(_cycle_difficulty)
+	add_child(difficulty_button)
+
 	theme_button = Button.new()
-	theme_button.position = Vector2(56, 430)
+	theme_button.position = Vector2(56, 482)
 	theme_button.size = Vector2(260, 42)
 	theme_button.pressed.connect(_cycle_theme)
 	add_child(theme_button)
 
 	language_button = Button.new()
-	language_button.position = Vector2(56, 482)
+	language_button.position = Vector2(56, 534)
 	language_button.size = Vector2(260, 42)
 	language_button.pressed.connect(_toggle_language)
 	add_child(language_button)
@@ -435,6 +460,14 @@ func _theme_name() -> String:
 	return data["name_zh"] if language == Language.ZH else data["name_en"]
 
 
+func _difficulty_name() -> String:
+	return _difficulty_name_for(difficulty)
+
+
+func _difficulty_name_for(value: int) -> String:
+	return _text("easy") if value == Difficulty.EASY else _text("normal")
+
+
 func _legacy_mode_name(raw: Variant) -> String:
 	if raw is int:
 		return _mode_name(raw)
@@ -448,10 +481,24 @@ func _legacy_mode_name(raw: Variant) -> String:
 	return str(raw)
 
 
+func _history_entry_name(entry: Dictionary) -> String:
+	var raw_mode: Variant = entry.get("mode", Mode.MARATHON)
+	var label := _legacy_mode_name(raw_mode)
+	var mode_value := -1
+	if raw_mode is int:
+		mode_value = raw_mode
+	elif str(raw_mode) == "Marathon":
+		mode_value = Mode.MARATHON
+	if mode_value == Mode.MARATHON and entry.has("difficulty"):
+		label += " " + _difficulty_name_for(int(entry.get("difficulty", Difficulty.NORMAL)))
+	return label
+
+
 func _refresh_static_text() -> void:
 	title_label.text = "DROP"
 	for i in menu_buttons.size():
 		menu_buttons[i].text = _mode_name(i)
+	difficulty_button.text = "%s: %s" % [_text("difficulty"), _difficulty_name()]
 	theme_button.text = "%s: %s" % [_text("theme"), _theme_name()]
 	language_button.text = "%s: %s" % [_text("language"), _text("chinese") if language == Language.ZH else _text("english")]
 	if screen == Screen.MENU:
@@ -468,6 +515,12 @@ func _refresh_static_text() -> void:
 
 func _cycle_theme() -> void:
 	theme_index = (theme_index + 1) % THEME_KEYS.size()
+	_refresh_static_text()
+	queue_redraw()
+
+
+func _cycle_difficulty() -> void:
+	difficulty = Difficulty.NORMAL if difficulty == Difficulty.EASY else Difficulty.EASY
 	_refresh_static_text()
 	queue_redraw()
 
@@ -574,6 +627,7 @@ func _show_menu() -> void:
 	_set_touch_controls(false)
 	for button in menu_buttons:
 		button.visible = true
+	difficulty_button.visible = true
 	theme_button.visible = true
 	language_button.visible = true
 	_refresh_static_text()
@@ -605,6 +659,8 @@ func start_game(new_mode: int) -> void:
 	level = 1
 	combo = -1
 	drop_delay = 0.8
+	easy_slowdown_start_level = 0
+	easy_slowdown_start_delay = 0.8
 	drop_clock = 0.0
 	soft_clock = 0.0
 	move_repeat_dir = 0
@@ -628,6 +684,7 @@ func start_game(new_mode: int) -> void:
 		_spawn_bot_piece()
 	for button in menu_buttons:
 		button.visible = false
+	difficulty_button.visible = false
 	theme_button.visible = false
 	language_button.visible = false
 	history_box.visible = false
@@ -719,6 +776,8 @@ func _input(event: InputEvent) -> void:
 		elif event.is_action_pressed("menu_up"):
 			selected_mode = (selected_mode + 2) % 3
 			menu_buttons[selected_mode].grab_focus()
+		elif event.is_action_pressed("menu_left") or event.is_action_pressed("menu_right"):
+			_cycle_difficulty()
 		elif event.is_action_pressed("ui_accept"):
 			start_game(selected_mode)
 		else:
@@ -879,9 +938,30 @@ func _award(cleared: int) -> void:
 	combo += 1
 	lines += cleared
 	level = 1 + lines / 10
-	drop_delay = max(0.09, 0.8 - float(level - 1) * 0.055)
 	var base: int = [0, 100, 300, 500, 800][cleared]
 	score += base * level + max(combo, 0) * 50
+	_update_drop_delay()
+
+
+func _update_drop_delay() -> void:
+	var normal_delay := _normal_drop_delay(level)
+	if mode != Mode.MARATHON or difficulty != Difficulty.EASY:
+		drop_delay = normal_delay
+		return
+	if score < EASY_SCORE_THRESHOLD:
+		easy_slowdown_start_level = 0
+		easy_slowdown_start_delay = normal_delay
+		drop_delay = normal_delay
+		return
+	if easy_slowdown_start_level == 0:
+		easy_slowdown_start_level = level
+		easy_slowdown_start_delay = normal_delay
+	var extra_levels: int = max(0, level - easy_slowdown_start_level)
+	drop_delay = max(0.09, easy_slowdown_start_delay - float(extra_levels) * 0.055 / EASY_ACCELERATION_DIVISOR)
+
+
+func _normal_drop_delay(for_level: int) -> float:
+	return max(0.09, 0.8 - float(for_level - 1) * 0.055)
 
 
 func _clear_lines(target_board: Array) -> int:
@@ -1160,6 +1240,7 @@ func _finish_game(message_key: String) -> void:
 func _save_score() -> void:
 	var entry := {
 		"mode": mode,
+		"difficulty": difficulty,
 		"score": score,
 		"lines": lines,
 		"level": level,
@@ -1201,7 +1282,7 @@ func _update_history_ui() -> void:
 	for i in min(history.size(), 8):
 		var entry = history[i]
 		var label := Label.new()
-		label.text = "%d. %s  %d" % [i + 1, _legacy_mode_name(entry.get("mode", Mode.MARATHON)), int(entry.get("score", 0))]
+		label.text = "%d. %s  %d" % [i + 1, _history_entry_name(entry), int(entry.get("score", 0))]
 		label.add_theme_font_size_override("font_size", 16)
 		history_box.add_child(label)
 
@@ -1209,7 +1290,7 @@ func _update_history_ui() -> void:
 func _update_labels() -> void:
 	title_label.text = "DROP"
 	stats_label.text = "%s\n%s %d\n%s %d\n%s %d\n%s %s" % [
-		_mode_name(mode),
+		_mode_name(mode) + (" / " + _difficulty_name() if mode == Mode.MARATHON else ""),
 		_text("score"),
 		score,
 		_text("lines"),
@@ -1335,7 +1416,7 @@ func _draw_vignette() -> void:
 func _draw_menu() -> void:
 	var theme := _theme_data()
 	draw_string(get_theme_default_font(), Vector2(56, 180), _text("tagline"), HORIZONTAL_ALIGNMENT_LEFT, -1, 22, theme["text"])
-	draw_string(get_theme_default_font(), Vector2(56, 560), _text("mode_summary"), HORIZONTAL_ALIGNMENT_LEFT, -1, 18, theme["muted"])
+	draw_string(get_theme_default_font(), Vector2(56, 600), _text("mode_summary"), HORIZONTAL_ALIGNMENT_LEFT, -1, 18, theme["muted"])
 
 
 func _draw_board(target_board: Array, origin: Vector2, include_active: bool, block_size: int = BLOCK) -> void:

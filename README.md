@@ -12,6 +12,10 @@ Drop is a bright, controller-friendly falling-block puzzle game prototype built 
 - Garbage Sprint: start with a messy board and clear it as quickly as possible.
 - Versus Bot: clear multiple lines to send garbage to a simple bot opponent.
 
+## Difficulty
+
+Marathon supports Easy and Normal difficulty. Normal uses the current speed curve. Easy follows the same curve until 100,000 points, then later speed increases are slowed to one-sixth of the Normal rate.
+
 ## Themes and languages
 
 Drop includes six background themes:
@@ -48,6 +52,7 @@ Keyboard:
 - Give up and return to menu: Q
 - Cycle theme: T
 - Toggle language: L
+- Change menu difficulty: Left/Right
 
 Gamepad:
 
@@ -58,6 +63,7 @@ Gamepad:
 - Hold: LB/RB
 - Pause/back: Start
 - Give up and return to menu: Select/Back or Guide
+- Change menu difficulty: D-pad left/right or left stick left/right
 
 ## Run locally
 
