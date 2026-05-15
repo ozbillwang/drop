@@ -113,7 +113,8 @@ const I18N := {
 		"pick_mode": "Pick a mode",
 		"controls_hint": "Keyboard: arrows / Z X / space / C / P / Q. Controller: D-pad, A confirm/drop, X/B rotate, LB/RB hold. Menu: up/down selects, A changes selected settings.",
 		"play_hint": "Clear lines, build combos, use Hold, and watch the next queue. Start/Esc pause, Q/Back quit.",
-		"paused_hint": "Paused. Press P / A to resume, Esc / Start / Back / Q for menu.",
+		"paused_hint": "Paused. Press P / A to resume. Press Esc / Start / Back / Q to confirm quitting.",
+		"quit_confirm_hint": "Quit to menu? Press Esc / Start / Back / Q again to quit, or P / A to keep playing.",
 		"game_over_hint": "Press A / Esc / Start to return to the mode menu.",
 		"tagline": "Fast, colorful block-clearing for couch and controller.",
 		"mode_summary": "Modes: speed survival, messy board cleanup, and bot battle.",
@@ -147,7 +148,8 @@ const I18N := {
 		"pick_mode": "选择玩法",
 		"controls_hint": "键盘：方向键 / Z X / 空格 / C / P / Q。手柄：十字键，A 确认/硬降，X/B 旋转，LB/RB 暂存。菜单上下选择，A 切换设置。",
 		"play_hint": "消行、连击、使用暂存，并留意下一个方块队列。Start/Esc 暂停，Q/Back 放弃。",
-		"paused_hint": "已暂停。按 P / A 继续，按 Esc / Start / Back / Q 返回菜单。",
+		"paused_hint": "已暂停。按 P / A 继续。按 Esc / Start / Back / Q 确认放弃。",
+		"quit_confirm_hint": "确认返回菜单？再按 Esc / Start / Back / Q 退出，按 P / A 继续。",
 		"game_over_hint": "按 A / Esc / Start 返回玩法菜单。",
 		"tagline": "快节奏、色彩鲜活，适合沙发和手柄的落块消除。",
 		"mode_summary": "玩法：加速生存、残局清理、Bot 对战。",
@@ -283,6 +285,7 @@ var bot_target_rot := 0
 var bot_lines := 0
 var bot_alive := true
 var result_key := ""
+var pause_quit_armed := false
 var history: Array = []
 var rng := RandomNumberGenerator.new()
 var background_textures := {}
@@ -532,7 +535,7 @@ func _refresh_static_text() -> void:
 		stats_label.text = _text("pick_mode")
 		hint_label.text = _text("controls_hint")
 	elif screen == Screen.PAUSED:
-		hint_label.text = _text("paused_hint")
+		hint_label.text = _pause_hint()
 	elif screen == Screen.GAME_OVER:
 		hint_label.text = _text("game_over_hint")
 	else:
@@ -556,6 +559,10 @@ func _toggle_language() -> void:
 	language = Language.ZH if language == Language.EN else Language.EN
 	_refresh_static_text()
 	queue_redraw()
+
+
+func _pause_hint() -> String:
+	return _text("quit_confirm_hint") if pause_quit_armed else _text("paused_hint")
 
 
 func _menu_item_count() -> int:
@@ -672,14 +679,41 @@ func _touch_button_up(id: String) -> void:
 
 func _handle_touch_menu() -> void:
 	if screen == Screen.PLAYING:
-		screen = Screen.PAUSED
-		hint_label.text = _text("paused_hint")
-	elif screen == Screen.PAUSED or screen == Screen.GAME_OVER:
+		_pause_game()
+	elif screen == Screen.PAUSED:
+		_request_quit_to_menu()
+	elif screen == Screen.GAME_OVER:
 		_show_menu()
+
+
+func _pause_game() -> void:
+	screen = Screen.PAUSED
+	pause_quit_armed = false
+	hint_label.text = _pause_hint()
+
+
+func _resume_game() -> void:
+	screen = Screen.PLAYING
+	pause_quit_armed = false
+	queue_redraw()
+
+
+func _request_quit_to_menu() -> void:
+	if screen == Screen.PLAYING:
+		_pause_game()
+		pause_quit_armed = true
+		hint_label.text = _pause_hint()
+	elif screen == Screen.PAUSED:
+		if pause_quit_armed:
+			_show_menu()
+		else:
+			pause_quit_armed = true
+			hint_label.text = _pause_hint()
 
 
 func _show_menu() -> void:
 	screen = Screen.MENU
+	pause_quit_armed = false
 	history_box.visible = true
 	history_box.position = Vector2(910, 126)
 	_set_touch_controls(false)
@@ -730,6 +764,7 @@ func start_game(new_mode: int) -> void:
 	touch_soft_pressed = false
 	bot_clock = 0.0
 	result_key = ""
+	pause_quit_armed = false
 	if mode == Mode.VERSUS:
 		for i in 16:
 			versus_sequence.append(_draw_piece())
@@ -830,7 +865,9 @@ func _input(event: InputEvent) -> void:
 		accept_event()
 		return
 	if event.is_action_pressed("quit_to_menu"):
-		if screen == Screen.PLAYING or screen == Screen.PAUSED or screen == Screen.GAME_OVER:
+		if screen == Screen.PLAYING or screen == Screen.PAUSED:
+			_request_quit_to_menu()
+		elif screen == Screen.GAME_OVER:
 			_show_menu()
 		accept_event()
 		return
@@ -849,13 +886,12 @@ func _input(event: InputEvent) -> void:
 		return
 	if event.is_action_pressed("pause"):
 		if screen == Screen.PLAYING:
-			screen = Screen.PAUSED
-			hint_label.text = _text("paused_hint")
+			_pause_game()
 		elif screen == Screen.PAUSED:
 			if _is_resume_event(event):
-				screen = Screen.PLAYING
+				_resume_game()
 			else:
-				_show_menu()
+				_request_quit_to_menu()
 		elif screen == Screen.GAME_OVER:
 			_show_menu()
 		else:
