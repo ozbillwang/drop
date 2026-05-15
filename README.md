@@ -50,7 +50,7 @@ Keyboard:
 - Rotate: Up/X and Z
 - Hold: C
 - Pause/resume: P
-- Pause / confirm quit while paused: Esc
+- Pause / open Quit/Play choice while paused: Esc
 - Give up and return to menu: Q, with confirmation
 - Cycle theme: T
 - Toggle language: L
@@ -63,7 +63,7 @@ Gamepad:
 - Hard drop / confirm: A
 - Rotate: X/B
 - Hold: LB/RB
-- Pause / confirm quit while paused: Start
+- Pause / open Quit/Play choice while paused: Start
 - Give up and return to menu: Select/Back or Guide, with confirmation
 - Menu navigation: D-pad/left stick up/down, A to activate the selected item
 

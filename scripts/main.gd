@@ -139,6 +139,9 @@ const I18N := {
 		"english": "English",
 		"chinese": "中文",
 		"paused": "Paused",
+		"quit": "Quit",
+		"play": "Play",
+		"quit_prompt": "Quit or keep playing?",
 		"game_over": "Game Over",
 		"board_cleared": "Board Cleared!",
 		"you_win": "You Win!",
@@ -174,6 +177,9 @@ const I18N := {
 		"english": "English",
 		"chinese": "中文",
 		"paused": "已暂停",
+		"quit": "退出",
+		"play": "继续",
+		"quit_prompt": "退出还是继续？",
 		"game_over": "游戏结束",
 		"board_cleared": "清理完成！",
 		"you_win": "你赢了！",
@@ -285,7 +291,8 @@ var bot_target_rot := 0
 var bot_lines := 0
 var bot_alive := true
 var result_key := ""
-var pause_quit_armed := false
+var pause_quit_prompt := false
+var pause_quit_choice := 1
 var history: Array = []
 var rng := RandomNumberGenerator.new()
 var background_textures := {}
@@ -562,7 +569,7 @@ func _toggle_language() -> void:
 
 
 func _pause_hint() -> String:
-	return _text("quit_confirm_hint") if pause_quit_armed else _text("paused_hint")
+	return _text("quit_confirm_hint") if pause_quit_prompt else _text("paused_hint")
 
 
 func _menu_item_count() -> int:
@@ -681,39 +688,54 @@ func _handle_touch_menu() -> void:
 	if screen == Screen.PLAYING:
 		_pause_game()
 	elif screen == Screen.PAUSED:
-		_request_quit_to_menu()
+		_show_pause_quit_prompt()
 	elif screen == Screen.GAME_OVER:
 		_show_menu()
 
 
 func _pause_game() -> void:
 	screen = Screen.PAUSED
-	pause_quit_armed = false
+	pause_quit_prompt = false
+	pause_quit_choice = 1
 	hint_label.text = _pause_hint()
 
 
 func _resume_game() -> void:
 	screen = Screen.PLAYING
-	pause_quit_armed = false
+	pause_quit_prompt = false
+	pause_quit_choice = 1
 	queue_redraw()
 
 
 func _request_quit_to_menu() -> void:
 	if screen == Screen.PLAYING:
 		_pause_game()
-		pause_quit_armed = true
-		hint_label.text = _pause_hint()
+		_show_pause_quit_prompt()
 	elif screen == Screen.PAUSED:
-		if pause_quit_armed:
-			_show_menu()
-		else:
-			pause_quit_armed = true
-			hint_label.text = _pause_hint()
+		_show_pause_quit_prompt()
+
+
+func _show_pause_quit_prompt() -> void:
+	pause_quit_prompt = true
+	pause_quit_choice = 1
+	hint_label.text = _pause_hint()
+
+
+func _toggle_pause_quit_choice() -> void:
+	pause_quit_choice = 1 - pause_quit_choice
+
+
+func _confirm_pause_quit_choice() -> void:
+	if pause_quit_choice == 0:
+		_show_menu()
+	else:
+		_resume_game()
 
 
 func _show_menu() -> void:
 	screen = Screen.MENU
-	pause_quit_armed = false
+	pause_quit_prompt = false
+	pause_quit_choice = 1
 	history_box.visible = true
 	history_box.position = Vector2(910, 126)
 	_set_touch_controls(false)
@@ -764,7 +786,8 @@ func start_game(new_mode: int) -> void:
 	touch_soft_pressed = false
 	bot_clock = 0.0
 	result_key = ""
-	pause_quit_armed = false
+	pause_quit_prompt = false
+	pause_quit_choice = 1
 	if mode == Mode.VERSUS:
 		for i in 16:
 			versus_sequence.append(_draw_piece())
@@ -864,8 +887,12 @@ func _input(event: InputEvent) -> void:
 		_toggle_language()
 		accept_event()
 		return
+	if screen == Screen.PAUSED:
+		if _handle_paused_input(event):
+			accept_event()
+		return
 	if event.is_action_pressed("quit_to_menu"):
-		if screen == Screen.PLAYING or screen == Screen.PAUSED:
+		if screen == Screen.PLAYING:
 			_request_quit_to_menu()
 		elif screen == Screen.GAME_OVER:
 			_show_menu()
@@ -887,11 +914,6 @@ func _input(event: InputEvent) -> void:
 	if event.is_action_pressed("pause"):
 		if screen == Screen.PLAYING:
 			_pause_game()
-		elif screen == Screen.PAUSED:
-			if _is_resume_event(event):
-				_resume_game()
-			else:
-				_request_quit_to_menu()
 		elif screen == Screen.GAME_OVER:
 			_show_menu()
 		else:
@@ -926,6 +948,28 @@ func _input(event: InputEvent) -> void:
 		return
 	queue_redraw()
 	accept_event()
+
+
+func _handle_paused_input(event: InputEvent) -> bool:
+	if pause_quit_prompt:
+		if event.is_action_pressed("menu_left") or event.is_action_pressed("menu_right") or event.is_action_pressed("menu_up") or event.is_action_pressed("menu_down") or event.is_action_pressed("soft_drop"):
+			_toggle_pause_quit_choice()
+		elif event.is_action_pressed("quit_to_menu"):
+			pause_quit_choice = 0
+		elif event.is_action_pressed("ui_accept") or event.is_action_pressed("pause"):
+			_confirm_pause_quit_choice()
+		else:
+			return false
+		queue_redraw()
+		return true
+	if event.is_action_pressed("pause") or event.is_action_pressed("quit_to_menu"):
+		_show_pause_quit_prompt()
+	elif event.is_action_pressed("ui_accept") or _is_resume_event(event):
+		_resume_game()
+	else:
+		return false
+	queue_redraw()
+	return true
 
 
 func _is_resume_event(event: InputEvent) -> bool:
@@ -1432,7 +1476,10 @@ func _draw() -> void:
 	if mode == Mode.VERSUS:
 		_draw_bot_board(Vector2(950, 112), 16)
 	if screen == Screen.PAUSED:
-		_draw_overlay(_text("paused"))
+		if pause_quit_prompt:
+			_draw_pause_quit_overlay()
+		else:
+			_draw_overlay(_text("paused"))
 	elif screen == Screen.GAME_OVER:
 		_draw_overlay(_text(result_key))
 
@@ -1605,3 +1652,22 @@ func _draw_overlay(text: String) -> void:
 	draw_rect(rect, PALETTE["O"], false, 3.0)
 	draw_string(get_theme_default_font(), rect.position + Vector2(44, 70), text, HORIZONTAL_ALIGNMENT_LEFT, -1, 36, Color("#ffffff"))
 	draw_string(get_theme_default_font(), rect.position + Vector2(44, 112), "%s %d" % [_text("score"), score], HORIZONTAL_ALIGNMENT_LEFT, -1, 22, Color("#dce7ff"))
+
+
+func _draw_pause_quit_overlay() -> void:
+	var rect := Rect2(Vector2(360, 240), Vector2(560, 190))
+	draw_rect(rect, Color("#090b13", 0.94))
+	draw_rect(rect, PALETTE["O"], false, 3.0)
+	draw_string(get_theme_default_font(), rect.position + Vector2(44, 58), _text("quit_prompt"), HORIZONTAL_ALIGNMENT_LEFT, -1, 32, Color("#ffffff"))
+	var quit_rect := Rect2(rect.position + Vector2(54, 104), Vector2(200, 52))
+	var play_rect := Rect2(rect.position + Vector2(306, 104), Vector2(200, 52))
+	_draw_pause_choice(quit_rect, _text("quit"), pause_quit_choice == 0)
+	_draw_pause_choice(play_rect, _text("play"), pause_quit_choice == 1)
+
+
+func _draw_pause_choice(rect: Rect2, label: String, selected: bool) -> void:
+	var fill := Color("#ffde59", 0.88) if selected else Color("#1a2136", 0.92)
+	var text_color := Color("#11131a") if selected else Color("#ffffff")
+	draw_rect(rect, fill)
+	draw_rect(rect, Color("#ffffff", 0.35), false, 2.0)
+	draw_string(get_theme_default_font(), rect.position + Vector2(0, 34), label, HORIZONTAL_ALIGNMENT_CENTER, rect.size.x, 24, text_color)
