@@ -39,6 +39,23 @@ const BACKGROUND_PATHS := {
 	"red": "res://assets/backgrounds/pulse-red.png",
 	"cyan": "res://assets/backgrounds/glacier-cyan.png"
 }
+const SFX_PATHS := {
+	"move": "res://assets/sfx/move.wav",
+	"rotate": "res://assets/sfx/rotate.wav",
+	"soft_drop": "res://assets/sfx/soft_drop.wav",
+	"hard_drop": "res://assets/sfx/hard_drop.wav",
+	"lock": "res://assets/sfx/lock.wav",
+	"clear": "res://assets/sfx/clear.wav",
+	"combo": "res://assets/sfx/combo.wav",
+	"hold": "res://assets/sfx/hold.wav",
+	"menu": "res://assets/sfx/menu.wav",
+	"select": "res://assets/sfx/select.wav",
+	"pause": "res://assets/sfx/pause.wav",
+	"resume": "res://assets/sfx/resume.wav",
+	"garbage": "res://assets/sfx/garbage.wav",
+	"win": "res://assets/sfx/win.wav",
+	"game_over": "res://assets/sfx/game_over.wav"
+}
 const THEME_DATA := {
 	"green": {
 		"name_en": "Vital Green",
@@ -307,6 +324,7 @@ var theme_button: Button
 var language_button: Button
 var touch_root: Control
 var touch_buttons := {}
+var sfx_players := {}
 
 
 func _ready() -> void:
@@ -314,6 +332,7 @@ func _ready() -> void:
 	_load_background_textures()
 	_setup_input()
 	_build_ui()
+	_setup_audio()
 	_load_history()
 	_show_menu()
 	set_process(true)
@@ -426,6 +445,7 @@ func _build_ui() -> void:
 		button.position = Vector2(56, 210 + i * 56)
 		button.size = Vector2(260, 48)
 		button.pressed.connect(func() -> void:
+			_play_sfx("select")
 			start_game(i)
 		)
 		add_child(button)
@@ -467,6 +487,26 @@ func _build_ui() -> void:
 		touch_root.add_child(button)
 		touch_buttons[spec["id"]] = button
 	_layout_touch_controls()
+
+
+func _setup_audio() -> void:
+	for key in SFX_PATHS:
+		var stream: AudioStream = load(SFX_PATHS[key])
+		if not stream:
+			continue
+		var player := AudioStreamPlayer.new()
+		player.stream = stream
+		player.volume_db = -5.0
+		add_child(player)
+		sfx_players[key] = player
+
+
+func _play_sfx(key: String) -> void:
+	var player := sfx_players.get(key) as AudioStreamPlayer
+	if not player:
+		return
+	player.stop()
+	player.play()
 
 
 func _notification(what: int) -> void:
@@ -551,18 +591,21 @@ func _refresh_static_text() -> void:
 
 
 func _cycle_theme() -> void:
+	_play_sfx("menu")
 	theme_index = (theme_index + 1) % THEME_KEYS.size()
 	_refresh_static_text()
 	queue_redraw()
 
 
 func _cycle_difficulty() -> void:
+	_play_sfx("menu")
 	difficulty = Difficulty.NORMAL if difficulty == Difficulty.EASY else Difficulty.EASY
 	_refresh_static_text()
 	queue_redraw()
 
 
 func _toggle_language() -> void:
+	_play_sfx("menu")
 	language = Language.ZH if language == Language.EN else Language.EN
 	_refresh_static_text()
 	queue_redraw()
@@ -593,6 +636,7 @@ func _focus_menu_item(index: int) -> void:
 
 func _activate_menu_item() -> void:
 	if selected_menu_item < menu_buttons.size():
+		_play_sfx("select")
 		selected_mode = selected_menu_item
 		start_game(selected_mode)
 	elif selected_menu_item == menu_buttons.size():
@@ -648,12 +692,14 @@ func _touch_button_down(id: String) -> void:
 		"left":
 			if screen == Screen.PLAYING:
 				touch_left_pressed = true
-				_try_move(Vector2i(-1, 0))
+				if _try_move(Vector2i(-1, 0)):
+					_play_sfx("move")
 				_start_horizontal_repeat(-1)
 		"right":
 			if screen == Screen.PLAYING:
 				touch_right_pressed = true
-				_try_move(Vector2i(1, 0))
+				if _try_move(Vector2i(1, 0)):
+					_play_sfx("move")
 				_start_horizontal_repeat(1)
 		"soft":
 			touch_soft_pressed = true
@@ -698,12 +744,14 @@ func _pause_game() -> void:
 	pause_quit_prompt = false
 	pause_quit_choice = 1
 	hint_label.text = _pause_hint()
+	_play_sfx("pause")
 
 
 func _resume_game() -> void:
 	screen = Screen.PLAYING
 	pause_quit_prompt = false
 	pause_quit_choice = 1
+	_play_sfx("resume")
 	queue_redraw()
 
 
@@ -719,10 +767,12 @@ func _show_pause_quit_prompt() -> void:
 	pause_quit_prompt = true
 	pause_quit_choice = 1
 	hint_label.text = _pause_hint()
+	_play_sfx("pause")
 
 
 func _toggle_pause_quit_choice() -> void:
 	pause_quit_choice = 1 - pause_quit_choice
+	_play_sfx("menu")
 
 
 func _confirm_pause_quit_choice() -> void:
@@ -867,6 +917,7 @@ func _process(delta: float) -> void:
 			soft_clock = 0.0
 			if _try_move(Vector2i(0, 1)):
 				score += 1
+				_play_sfx("soft_drop")
 	else:
 		soft_clock = 0.0
 	if drop_clock >= drop_delay:
@@ -900,8 +951,10 @@ func _input(event: InputEvent) -> void:
 		return
 	if screen == Screen.MENU:
 		if event.is_action_pressed("menu_down") or event.is_action_pressed("soft_drop"):
+			_play_sfx("menu")
 			_focus_menu_item(selected_menu_item + 1)
 		elif event.is_action_pressed("menu_up"):
+			_play_sfx("menu")
 			_focus_menu_item(selected_menu_item - 1)
 		elif (event.is_action_pressed("menu_left") or event.is_action_pressed("menu_right")) and selected_menu_item == menu_buttons.size():
 			_cycle_difficulty()
@@ -929,10 +982,12 @@ func _input(event: InputEvent) -> void:
 		return
 	var handled := true
 	if event.is_action_pressed("move_left"):
-		_try_move(Vector2i(-1, 0))
+		if _try_move(Vector2i(-1, 0)):
+			_play_sfx("move")
 		_start_horizontal_repeat(-1)
 	elif event.is_action_pressed("move_right"):
-		_try_move(Vector2i(1, 0))
+		if _try_move(Vector2i(1, 0)):
+			_play_sfx("move")
 		_start_horizontal_repeat(1)
 	elif event.is_action_pressed("rotate_cw"):
 		_try_rotate(1)
@@ -1007,7 +1062,8 @@ func _process_horizontal_repeat(delta: float) -> void:
 	if move_repeat_clock >= threshold:
 		move_repeat_clock = 0.0
 		move_repeat_started = true
-		_try_move(Vector2i(direction, 0))
+		if _try_move(Vector2i(direction, 0)):
+			_play_sfx("move")
 
 
 func _gravity_step() -> void:
@@ -1029,6 +1085,7 @@ func _try_rotate(direction: int) -> void:
 		if _can_place(active, active_pos + kick, next_rot, board):
 			active_pos += kick
 			active_rot = next_rot
+			_play_sfx("rotate")
 			return
 
 
@@ -1038,12 +1095,14 @@ func _hard_drop() -> void:
 		active_pos.y += 1
 		dropped += 1
 	score += dropped * 2
+	_play_sfx("hard_drop")
 	_lock_piece()
 
 
 func _hold() -> void:
 	if hold_locked:
 		return
+	_play_sfx("hold")
 	if hold_piece.is_empty():
 		hold_piece = active
 		_spawn_piece()
@@ -1062,6 +1121,7 @@ func _lock_piece() -> void:
 	for cell in _piece_cells(active, active_pos, active_rot):
 		if cell.y >= 0 and cell.y < ROWS and cell.x >= 0 and cell.x < COLS:
 			board[cell.y][cell.x] = active
+	_play_sfx("lock")
 	var cleared := _clear_lines(board)
 	_award(cleared)
 	if mode == Mode.SPRINT and _count_garbage(board) == 0:
@@ -1083,6 +1143,7 @@ func _award(cleared: int) -> void:
 	level = 1 + lines / 10
 	var base := _line_clear_score(cleared)
 	score += base * level + max(combo, 0) * 50
+	_play_sfx("combo" if cleared >= 4 or combo > 0 else "clear")
 	_update_drop_delay()
 
 
@@ -1159,6 +1220,7 @@ func _add_garbage(target_board: Array, amount: int) -> void:
 
 func _attack_bot(amount: int) -> void:
 	_add_garbage(bot_board, amount)
+	_play_sfx("garbage")
 	if not bot_piece.is_empty():
 		_lift_bot_piece_until_valid(amount)
 		if not _can_place(bot_piece, bot_pos, bot_rot, bot_board):
@@ -1168,6 +1230,7 @@ func _attack_bot(amount: int) -> void:
 
 func _attack_player(amount: int) -> void:
 	_add_garbage(board, amount)
+	_play_sfx("garbage")
 	if not active.is_empty():
 		_lift_player_piece_until_valid(amount)
 		if not _can_place(active, active_pos, active_rot, board):
@@ -1391,6 +1454,7 @@ func _ghost_pos() -> Vector2i:
 func _finish_game(message_key: String) -> void:
 	result_key = message_key
 	screen = Screen.GAME_OVER
+	_play_sfx("win" if message_key == "you_win" or message_key == "board_cleared" else "game_over")
 	_save_score()
 	_update_history_ui()
 	history_box.visible = true
