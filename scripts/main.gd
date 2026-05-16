@@ -11,7 +11,8 @@ const MOVE_REPEAT_INTERVAL := 0.06
 const LOCK_DELAY := 0.45
 const LOCK_RESET_LIMIT := 15
 const EASY_SCORE_THRESHOLD := 100000
-const EASY_ACCELERATION_DIVISOR := 6.0
+const EASY_POST_THRESHOLD_MIN_DELAY := 0.32
+const EASY_POST_THRESHOLD_ACCELERATION := 0.008
 
 enum Screen { MENU, PLAYING, PAUSED, GAME_OVER }
 enum Mode { MARATHON, SPRINT, VERSUS, SIX_PACK }
@@ -1208,9 +1209,9 @@ func _update_drop_delay() -> void:
 		return
 	if easy_slowdown_start_level == 0:
 		easy_slowdown_start_level = level
-		easy_slowdown_start_delay = normal_delay
+		easy_slowdown_start_delay = max(normal_delay, EASY_POST_THRESHOLD_MIN_DELAY)
 	var extra_levels: int = max(0, level - easy_slowdown_start_level)
-	drop_delay = max(0.09, easy_slowdown_start_delay - float(extra_levels) * 0.055 / EASY_ACCELERATION_DIVISOR)
+	drop_delay = max(0.26, easy_slowdown_start_delay - float(extra_levels) * EASY_POST_THRESHOLD_ACCELERATION)
 
 
 func _normal_drop_delay(for_level: int) -> float:
