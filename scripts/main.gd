@@ -5,6 +5,7 @@ const ROWS := 20
 const BLOCK := 28
 const BOARD_ORIGIN := Vector2(410, 76)
 const HISTORY_PATH := "user://scores.json"
+const SETTINGS_PATH := "user://settings.cfg"
 const MAX_HISTORY := 10
 const MOVE_REPEAT_DELAY := 0.18
 const MOVE_REPEAT_INTERVAL := 0.06
@@ -156,6 +157,8 @@ const I18N := {
 		"normal": "Normal",
 		"theme": "Theme",
 		"language": "Language",
+		"sound_on": "Sound On",
+		"sound_off": "Sound Off",
 		"english": "English",
 		"chinese": "中文",
 		"paused": "Paused",
@@ -194,6 +197,8 @@ const I18N := {
 		"normal": "普通",
 		"theme": "背景",
 		"language": "语言",
+		"sound_on": "音效开",
+		"sound_off": "音效关",
 		"english": "English",
 		"chinese": "中文",
 		"paused": "已暂停",
@@ -274,6 +279,7 @@ var selected_menu_item := 0
 var language := Language.EN
 var difficulty := Difficulty.NORMAL
 var theme_index := 0
+var sound_enabled := true
 var board: Array = []
 var bot_board: Array = []
 var active := ""
@@ -327,6 +333,7 @@ var menu_buttons: Array[Button] = []
 var difficulty_button: Button
 var theme_button: Button
 var language_button: Button
+var sound_button: Button
 var touch_root: Control
 var touch_buttons := {}
 var sfx_players := {}
@@ -335,6 +342,7 @@ var sfx_players := {}
 func _ready() -> void:
 	rng.randomize()
 	_load_background_textures()
+	_load_settings()
 	_setup_input()
 	_build_ui()
 	_setup_audio()
@@ -474,6 +482,13 @@ func _build_ui() -> void:
 	language_button.pressed.connect(_toggle_language)
 	add_child(language_button)
 
+	sound_button = Button.new()
+	sound_button.position = Vector2(1112, 32)
+	sound_button.size = Vector2(112, 40)
+	sound_button.focus_mode = Control.FOCUS_NONE
+	sound_button.pressed.connect(_toggle_sound)
+	add_child(sound_button)
+
 	touch_root = Control.new()
 	touch_root.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	touch_root.visible = false
@@ -507,11 +522,26 @@ func _setup_audio() -> void:
 
 
 func _play_sfx(key: String) -> void:
+	if not sound_enabled:
+		return
 	var player := sfx_players.get(key) as AudioStreamPlayer
 	if not player:
 		return
 	player.stop()
 	player.play()
+
+
+func _load_settings() -> void:
+	var config := ConfigFile.new()
+	if config.load(SETTINGS_PATH) != OK:
+		return
+	sound_enabled = bool(config.get_value("audio", "sound_enabled", true))
+
+
+func _save_settings() -> void:
+	var config := ConfigFile.new()
+	config.set_value("audio", "sound_enabled", sound_enabled)
+	config.save(SETTINGS_PATH)
 
 
 func _notification(what: int) -> void:
@@ -583,6 +613,7 @@ func _refresh_static_text() -> void:
 	difficulty_button.text = "%s: %s" % [_text("difficulty"), _difficulty_name()]
 	theme_button.text = "%s: %s" % [_text("theme"), _theme_name()]
 	language_button.text = "%s: %s" % [_text("language"), _text("chinese") if language == Language.ZH else _text("english")]
+	sound_button.text = _text("sound_on") if sound_enabled else _text("sound_off")
 	if screen == Screen.MENU:
 		stats_label.text = _text("pick_mode")
 		hint_label.text = _text("controls_hint")
@@ -613,6 +644,15 @@ func _toggle_language() -> void:
 	_play_sfx("menu")
 	language = Language.ZH if language == Language.EN else Language.EN
 	_refresh_static_text()
+	queue_redraw()
+
+
+func _toggle_sound() -> void:
+	sound_enabled = not sound_enabled
+	_save_settings()
+	_refresh_static_text()
+	if sound_enabled:
+		_play_sfx("select")
 	queue_redraw()
 
 
