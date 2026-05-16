@@ -579,8 +579,10 @@ func _difficulty_name_for(value: int) -> String:
 
 
 func _legacy_mode_name(raw: Variant) -> String:
-	if raw is int:
-		return _mode_name(raw)
+	if raw is int or raw is float:
+		var mode_value := int(raw)
+		if mode_value >= 0 and mode_value < MODE_KEYS.size():
+			return _mode_name(mode_value)
 	match str(raw):
 		"Marathon":
 			return _mode_name(Mode.MARATHON)
@@ -597,8 +599,8 @@ func _history_entry_name(entry: Dictionary) -> String:
 	var raw_mode: Variant = entry.get("mode", Mode.MARATHON)
 	var label := _legacy_mode_name(raw_mode)
 	var mode_value := -1
-	if raw_mode is int:
-		mode_value = raw_mode
+	if raw_mode is int or raw_mode is float:
+		mode_value = int(raw_mode)
 	elif str(raw_mode) == "Marathon":
 		mode_value = Mode.MARATHON
 	if mode_value == Mode.MARATHON and entry.has("difficulty"):
@@ -1542,8 +1544,8 @@ func _finish_game(message_key: String) -> void:
 
 func _save_score() -> void:
 	var entry := {
-		"mode": mode,
-		"difficulty": difficulty,
+		"mode": int(mode),
+		"difficulty": int(difficulty),
 		"score": score,
 		"lines": lines,
 		"level": level,
