@@ -8,6 +8,8 @@ const HISTORY_PATH := "user://scores.json"
 const MAX_HISTORY := 10
 const MOVE_REPEAT_DELAY := 0.18
 const MOVE_REPEAT_INTERVAL := 0.06
+const LOCK_DELAY := 0.45
+const LOCK_RESET_LIMIT := 15
 const EASY_SCORE_THRESHOLD := 100000
 const EASY_ACCELERATION_DIVISOR := 6.0
 
@@ -290,6 +292,8 @@ var combo := -1
 var drop_delay := 0.8
 var drop_clock := 0.0
 var soft_clock := 0.0
+var lock_clock := 0.0
+var lock_resets := 0
 var easy_slowdown_start_level := 0
 var easy_slowdown_start_delay := 0.8
 var move_repeat_dir := 0
@@ -828,6 +832,8 @@ func start_game(new_mode: int) -> void:
 	easy_slowdown_start_delay = 0.8
 	drop_clock = 0.0
 	soft_clock = 0.0
+	lock_clock = 0.0
+	lock_resets = 0
 	move_repeat_dir = 0
 	move_repeat_clock = 0.0
 	move_repeat_started = false
@@ -901,6 +907,8 @@ func _spawn_piece() -> void:
 		next_queue.append(_draw_piece())
 	active_pos = Vector2i(5, 1)
 	active_rot = 0
+	lock_clock = 0.0
+	lock_resets = 0
 	hold_locked = false
 	if not _can_place(active, active_pos, active_rot, board):
 		_finish_game("bot_wins" if mode == Mode.VERSUS else "game_over")
@@ -923,6 +931,9 @@ func _process(delta: float) -> void:
 	if drop_clock >= drop_delay:
 		drop_clock = 0.0
 		_gravity_step()
+	_process_lock_delay(delta)
+	if screen != Screen.PLAYING:
+		return
 	if mode == Mode.VERSUS:
 		_process_bot(delta)
 	_update_labels()
@@ -1067,7 +1078,15 @@ func _process_horizontal_repeat(delta: float) -> void:
 
 
 func _gravity_step() -> void:
-	if not _try_move(Vector2i(0, 1)):
+	_try_move(Vector2i(0, 1))
+
+
+func _process_lock_delay(delta: float) -> void:
+	if not _is_grounded():
+		lock_clock = 0.0
+		return
+	lock_clock += delta
+	if lock_clock >= LOCK_DELAY:
 		_lock_piece()
 
 
@@ -1075,6 +1094,10 @@ func _try_move(delta: Vector2i) -> bool:
 	var target := active_pos + delta
 	if _can_place(active, target, active_rot, board):
 		active_pos = target
+		if delta.y > 0:
+			lock_clock = 0.0
+		elif delta.y == 0:
+			_try_extend_lock_delay()
 		return true
 	return false
 
@@ -1085,8 +1108,20 @@ func _try_rotate(direction: int) -> void:
 		if _can_place(active, active_pos + kick, next_rot, board):
 			active_pos += kick
 			active_rot = next_rot
+			_try_extend_lock_delay()
 			_play_sfx("rotate")
 			return
+
+
+func _try_extend_lock_delay() -> void:
+	if not _is_grounded() or lock_resets >= LOCK_RESET_LIMIT:
+		return
+	lock_resets += 1
+	lock_clock = 0.0
+
+
+func _is_grounded() -> bool:
+	return not _can_place(active, active_pos + Vector2i(0, 1), active_rot, board)
 
 
 func _hard_drop() -> void:
@@ -1112,6 +1147,8 @@ func _hold() -> void:
 		active = swap
 		active_pos = Vector2i(5, 1)
 		active_rot = 0
+		lock_clock = 0.0
+		lock_resets = 0
 		if not _can_place(active, active_pos, active_rot, board):
 			_finish_game("game_over")
 	hold_locked = true
