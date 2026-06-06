@@ -344,6 +344,7 @@ func _ready() -> void:
 	_load_background_textures()
 	_load_settings()
 	_setup_input()
+	Input.joy_connection_changed.connect(_on_joy_connection_changed)
 	_build_ui()
 	_setup_audio()
 	_load_history()
@@ -547,6 +548,22 @@ func _save_settings() -> void:
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_RESIZED and touch_root:
 		_layout_touch_controls()
+	elif what == NOTIFICATION_WM_WINDOW_FOCUS_IN:
+		_reset_controller_state()
+
+
+func _on_joy_connection_changed(_device: int, _connected: bool) -> void:
+	_reset_controller_state()
+
+
+func _reset_controller_state() -> void:
+	touch_left_pressed = false
+	touch_right_pressed = false
+	touch_soft_pressed = false
+	move_repeat_dir = 0
+	move_repeat_clock = 0.0
+	move_repeat_started = false
+	soft_clock = 0.0
 
 
 func _language_code() -> String:
@@ -992,6 +1009,9 @@ func _input(event: InputEvent) -> void:
 		_toggle_language()
 		accept_event()
 		return
+	if _handle_raw_controller_ui_input(event):
+		accept_event()
+		return
 	if screen == Screen.PAUSED:
 		if _handle_paused_input(event):
 			accept_event()
@@ -1057,6 +1077,68 @@ func _input(event: InputEvent) -> void:
 		return
 	queue_redraw()
 	accept_event()
+
+
+func _handle_raw_controller_ui_input(event: InputEvent) -> bool:
+	if not event is InputEventJoypadButton:
+		return false
+	var joy_event := event as InputEventJoypadButton
+	if not joy_event.pressed:
+		return false
+	var button := joy_event.button_index
+	if screen == Screen.PLAYING:
+		if button == JOY_BUTTON_START:
+			_pause_game()
+			queue_redraw()
+			return true
+		if button == JOY_BUTTON_BACK or button == JOY_BUTTON_GUIDE:
+			_request_quit_to_menu()
+			queue_redraw()
+			return true
+		return false
+	if screen == Screen.PAUSED:
+		if pause_quit_prompt:
+			if _is_controller_dpad(button):
+				_toggle_pause_quit_choice()
+			elif button == JOY_BUTTON_BACK or button == JOY_BUTTON_GUIDE:
+				pause_quit_choice = 0
+			elif button == JOY_BUTTON_A or button == JOY_BUTTON_START:
+				_confirm_pause_quit_choice()
+			else:
+				return true
+		elif button == JOY_BUTTON_START or button == JOY_BUTTON_BACK or button == JOY_BUTTON_GUIDE:
+			_show_pause_quit_prompt()
+		elif button == JOY_BUTTON_A:
+			_resume_game()
+		else:
+			return true
+		queue_redraw()
+		return true
+	if screen == Screen.MENU:
+		if button == JOY_BUTTON_DPAD_DOWN:
+			_play_sfx("menu")
+			_focus_menu_item(selected_menu_item + 1)
+		elif button == JOY_BUTTON_DPAD_UP:
+			_play_sfx("menu")
+			_focus_menu_item(selected_menu_item - 1)
+		elif (button == JOY_BUTTON_DPAD_LEFT or button == JOY_BUTTON_DPAD_RIGHT) and selected_menu_item == menu_buttons.size():
+			_cycle_difficulty()
+		elif button == JOY_BUTTON_A or button == JOY_BUTTON_START:
+			_activate_menu_item()
+		else:
+			return true
+		queue_redraw()
+		return true
+	if screen == Screen.GAME_OVER:
+		if button == JOY_BUTTON_A or button == JOY_BUTTON_START or button == JOY_BUTTON_BACK or button == JOY_BUTTON_GUIDE:
+			_show_menu()
+			queue_redraw()
+		return true
+	return false
+
+
+func _is_controller_dpad(button: int) -> bool:
+	return button == JOY_BUTTON_DPAD_LEFT or button == JOY_BUTTON_DPAD_RIGHT or button == JOY_BUTTON_DPAD_UP or button == JOY_BUTTON_DPAD_DOWN
 
 
 func _handle_paused_input(event: InputEvent) -> bool:
