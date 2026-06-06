@@ -79,6 +79,16 @@ godot --path /Users/bill/Documents/drop
 
 Scores are stored locally in Godot's `user://scores.json`.
 
+## HTML5 export
+
+Build a web release package with the helper script so the zip contains `index.html` at the archive root:
+
+```sh
+./scripts/build_html5_release.sh
+```
+
+Then upload `build/web_release.zip` to itch.io.
+
 ## Publishing note
 
 Drop should stay visually and commercially distinct from official Tetris products: use the Drop name, original art, original audio, and avoid Tetris trademarks in marketing or store metadata.
