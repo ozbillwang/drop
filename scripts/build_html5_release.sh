@@ -13,15 +13,17 @@ mkdir -p "$TEMP_DIR"
 # Export HTML5. Godot may emit web assets and a .zip file that is actually HTML.
 godot --headless --path "$ROOT_DIR" --export-release "HTML5" "$EXPORT_PATH"
 
-# Prefer the actual HTML export file if Godot wrote it to web.zip, otherwise fall back to web.html or archive contents.
-if [[ -f "$EXPORT_PATH" ]] && file "$EXPORT_PATH" | grep -q 'HTML document'; then
-  cp "$EXPORT_PATH" "$TEMP_DIR/index.html"
-elif [[ -f "$BUILD_DIR/web.html" ]]; then
+# Prefer a generated web.html if present, otherwise fall back to web.zip contents.
+if [[ -f "$BUILD_DIR/web.html" ]]; then
   cp "$BUILD_DIR/web.html" "$TEMP_DIR/index.html"
 elif [[ -f "$EXPORT_PATH" ]]; then
-  unzip -q "$EXPORT_PATH" -d "$TEMP_DIR"
-  if [[ -f "$TEMP_DIR/web.html" && ! -f "$TEMP_DIR/index.html" ]]; then
-    mv "$TEMP_DIR/web.html" "$TEMP_DIR/index.html"
+  if file "$EXPORT_PATH" | grep -q 'HTML document'; then
+    cp "$EXPORT_PATH" "$TEMP_DIR/index.html"
+  else
+    unzip -q "$EXPORT_PATH" -d "$TEMP_DIR"
+    if [[ -f "$TEMP_DIR/web.html" && ! -f "$TEMP_DIR/index.html" ]]; then
+      mv "$TEMP_DIR/web.html" "$TEMP_DIR/index.html"
+    fi
   fi
 else
   echo "No HTML5 export output found in $BUILD_DIR" >&2
